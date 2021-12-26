@@ -1,0 +1,199 @@
+#pragma once
+
+namespace libhoard::detail {
+
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename HashTable, typename... Args, std::size_t... KeyIndices>
+inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, [[maybe_unused]] std::piecewise_construct_t pc, std::tuple<Args...> key, [[maybe_unused]] std::index_sequence<KeyIndices...> key_indices)
+: BaseTypes(table)...,
+  key_(std::get<KeyIndices>(std::move(key))...),
+  mapped_(table.get_allocator())
+{}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename HashTable, typename... Args, std::size_t... KeyIndices>
+inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> key, [[maybe_unused]] std::index_sequence<KeyIndices...> key_indices, error_type ex)
+: BaseTypes(table)...,
+  key_(std::get<KeyIndices>(std::move(key))...),
+  mapped_(pc, std::move(ex))
+{}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename HashTable, typename... Args, typename... MappedArgs, std::size_t... KeyIndices>
+inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> key, [[maybe_unused]] std::index_sequence<KeyIndices...> key_indices, std::tuple<MappedArgs...> mapped_args)
+: BaseTypes(table)...,
+  key_(std::get<KeyIndices>(std::move(key))...),
+  mapped_(pc, std::move(mapped_args))
+{}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename HashTable>
+inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, key_type key)
+: BaseTypes(table)...,
+  key_(std::move(key)),
+  mapped_(table.get_allocator())
+{}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename HashTable, typename... Args>
+inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> key)
+: value_type(table, pc, std::move(key), std::index_sequence_for<Args...>())
+{}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename HashTable, typename... Args>
+inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> key, error_type ex)
+: value_type(table, pc, std::move(key), std::index_sequence_for<Args...>(), std::move(ex))
+{}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename HashTable, typename... Args, typename... MappedArgs>
+inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> key, std::tuple<MappedArgs...> mapped_args)
+: value_type(table, pc, std::move(key), std::index_sequence_for<Args...>(), std::move(mapped_args))
+{}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<bool IncludePending>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::get_if_matching(function_ref<bool(const key_type&)> matcher, std::integral_constant<bool, IncludePending> include_pending) const
+-> std::conditional_t<
+    IncludePending,
+    std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+    std::variant<std::monostate, mapped_type, error_type>> {
+  if (std::invoke(matcher, key_)) return mapped_.get(include_pending);
+  return {};
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::matches(function_ref<bool(const key_type&)> matcher) const -> bool {
+  return std::invoke(matcher, key_);
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::pending() const noexcept -> bool {
+  return mapped_.pending();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::expired() const noexcept -> bool {
+  return mapped_.expired();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::mark_expired() noexcept -> void {
+  mapped_.mark_expired();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::weaken() noexcept -> void {
+  mapped_.weaken();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::strengthen() noexcept -> bool {
+  return mapped_.strengthen();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::cancel() noexcept -> void {
+  mapped_.cancel();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::holds_value() const noexcept -> bool {
+  return mapped_.holds_value();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::holds_error() const noexcept -> bool {
+  return mapped_.holds_error();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::get_pending() noexcept -> pending_type* {
+  return mapped_.get_pending();
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+template<typename... Args>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::assign(Args&&... args) noexcept(noexcept(std::declval<mapper&>().assign(std::declval<Args>()...))) -> pending_type {
+  return mapped_.assign(std::forward<Args>(args)...);
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::assign_error(error_type ex) noexcept -> void {
+  mapped_.assign_error(std::move(ex));
+}
+
+
+template<typename Mapper, typename... BaseTypes>
+template<typename HashTable>
+inline value_type<identity_t, Mapper, BaseTypes...>::value_type(const HashTable& table, key_type key)
+: BaseTypes(table)...,
+  mapped_(std::piecewise_construct, std::forward_as_tuple(std::move(key)))
+{}
+
+template<typename Mapper, typename... BaseTypes>
+template<typename HashTable, typename... Args>
+inline value_type<identity_t, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> args)
+: BaseTypes(table)...,
+  mapped_(pc, std::move(args))
+{}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::get_if_matching(function_ref<bool(const key_type&)> matcher, [[maybe_unused]] std::false_type include_pending) const -> std::variant<std::monostate, mapped_type, error_type> {
+  return mapped_.get_if_matching(matcher);
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::matches(function_ref<bool(const key_type&)> matcher) const -> bool {
+  return mapped_.matches(matcher);
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::pending() const noexcept -> bool {
+  return mapped_.pending();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::expired() const noexcept -> bool {
+  return mapped_.expired();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::mark_expired() noexcept -> void {
+  mapped_.mark_expired();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::weaken() noexcept -> void {
+  mapped_.weaken();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::strengthen() noexcept -> bool {
+  return mapped_.strengthen();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::cancel() noexcept -> void {
+  mapped_.cancel();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::holds_value() const noexcept -> bool {
+  return mapped_.holds_value();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::holds_error() const noexcept -> bool {
+  return mapped_.holds_error();
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::get_pending() noexcept -> pending_type* {
+  return mapped_.get_pending();
+}
+
+
+} /* namespace libhoard::detail */

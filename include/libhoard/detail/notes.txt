@@ -1,0 +1,72 @@
+Modes of querying a cache:
+1.  blocking (wait until resolution is available)
+2.  non-blocking promise/future (fire off the cache request, and block at a later point on the future)
+3.  non-blocking callback (fire off the cache request, callback will be invoked once the answer is available)
+
+Modes of filling a cache:
+A.  put only (there is no function to be invoked)
+B.  get with fill value (if there is no value, insert the fill value into the cache)
+C.  synchronous function, keep locked (invoked when lookup is needed, doesn't unlock the cache during its run)
+D.  synchronous function, unlocked (invoked when lookup is needed, unlocks the cache during its run)
+E.  async using std::async function (fires off a std::async task to handle resolution)
+F.  async using asio (enqueues resolution function onto an io-context)
+G.  async using boost::asio (enqueues resolution function onto an io-context)
+H.  async using networking-tr1 (enqueues resolution function onto an io-context)
+
+----
+
+Event flow:
+
+Lifecycle events:
+1. on_create -- on value_type creation (pending state)
+2. on_assign -- on acquiring a value
+3. on_unlink -- when the value is removed from the cache (never done for pending state)
+Note: if a value_type is initialized with a value, on_create will fire anyway, immediately followed by on_assign.
+
+Cache events:
+1. on_hit -- fires when a lookup succeeds (argument: value_type on which the hit happened)
+2. on_miss -- fires when a lookup fails (no arguments)
+
+Memory events:
+1. on_allocate? -- fires when cache allocates memory for itself
+2. on_deallocate? -- fires when cache deallocates memory for itself
+
+Maintenance:
+1. how many elements should be weakened and/or expired?
+2. on_maintenance -- fires after (1), fires after mutating operations
+
+event listeners can expose acceptors for any or all of these events
+
+----
+
+Queue:
+2-queue
+will allow for removing N elements (which it does by selecting the N coldest elements and unlinking them)
+is an event listener
+
+----
+
+policies:
+- is an event listener
+- exposes a function that return number of elements to remove from the cache
+  (if it supplies a value greater than the cache size, the cache will be emptied)
+  cache selects the max-of-all-policies, and asks the queue to handle removal
+
+class Policy {
+  // Optional: policies that must be added for this policy to function.
+  using dependencies = type_list<Other Policies...>;
+
+  // Optional: class added to base of value_type.
+  class value_base {};
+
+  // Optional: class added to the hashtable implementation.
+  template<typename HashTable>
+  class table_base {
+    public:
+    void on_hit_(ValueType* v); // Optional: on-hit event.
+    void on_miss_(); // Optional: on-miss event.
+    void on_create_(ValueType* v); // Optional: on-create event.
+    void on_assign_(ValueType* v, bool assigned_a_value, bool assigned_via_callback); // Optional: on-assign event. assigned_a_value is set if the assignment assigned a value. assigned_via_callback is set if the value was assigned using a callback function.
+    void on_unlink_(ValueType* v); // Optional: on-unlink event.
+  };
+};

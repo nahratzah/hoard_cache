@@ -1,0 +1,12 @@
+#pragma once
+
+namespace libhoard::detail {
+
+
+template<typename T>
+inline auto identity_fn::operator()(T&& v) const noexcept(std::is_lvalue_reference_v<T> || std::is_nothrow_constructible_v<std::remove_reference_t<T>, T>) -> T {
+  return std::forward<T>(v);
+}
+
+
+} /* namespace libhoard::detail */

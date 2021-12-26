@@ -1,0 +1,542 @@
+#pragma once
+
+namespace libhoard::detail {
+
+
+template<typename T>
+template<typename HashTable>
+inline hashtable_dfl_constructible_<T>::hashtable_dfl_constructible_(const HashTable& ht)
+{}
+
+
+template<typename ValueType, typename... BaseTypes>
+template<typename... Args, typename Alloc>
+inline hashtable_policy_container<ValueType, BaseTypes...>::hashtable_policy_container(const std::tuple<Args...>& args, const Alloc& alloc)
+: BaseTypes(args, alloc)...
+{}
+
+template<typename ValueType, typename... BaseTypes>
+inline hashtable_policy_container<ValueType, BaseTypes...>::~hashtable_policy_container() noexcept = default;
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_create_(ValueType* vptr) noexcept -> void {
+  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_create_(std::declval<ValueType*>()))> {
+        return this->T::on_create_(vptr);
+      });
+}
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_assign_(ValueType* vptr, bool value, bool assigned_via_callback) noexcept -> void {
+  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_assign_(std::declval<ValueType*>(), std::declval<bool>(), std::declval<bool>()))> {
+        return this->T::on_assign_(vptr, value, assigned_via_callback);
+      });
+}
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_unlink_(ValueType* vptr) noexcept -> void {
+  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_unlink_(std::declval<ValueType*>()))> {
+        return this->T::on_unlink_(vptr);
+      });
+}
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_hit_(ValueType* vptr) noexcept -> void {
+  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_hit_(std::declval<ValueType*>()))> {
+        return this->T::on_hit_(vptr);
+      });
+}
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_miss_() noexcept -> void {
+  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_miss_())> {
+        return this->T::on_miss_();
+      });
+}
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_maintenance_() noexcept -> void {
+  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_maintenance_())> {
+        return this->T::on_maintenance_();
+      });
+}
+
+template<typename ValueType, typename... BaseTypes>
+template<bool Enable>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::policy_removal_check_() const noexcept -> std::enable_if_t<Enable, std::size_t> {
+  std::size_t count_to_remove = 0;
+  base_invoke_([this, &count_to_remove]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<const T&>().policy_removal_check_())> {
+        std::size_t local_count_to_remove = this->T::policy_removal_check_();
+        if (local_count_to_remove > count_to_remove)
+          count_to_remove = local_count_to_remove;
+      });
+  return count_to_remove;
+}
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::init() -> void {
+  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().init())> {
+        this->T::init();
+      });
+}
+
+template<typename ValueType, typename... BaseTypes>
+template<typename Fn>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::base_invoke_(Fn&& fn) noexcept -> void {
+  typename type_list<BaseTypes...>::template apply_t<maybe_apply_for_each_type> functors;
+  functors(std::forward<Fn>(fn));
+}
+
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::iterator::iterator() noexcept = default;
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::iterator::iterator(basic_hashtable_algorithms::iterator iter) noexcept
+: iter_(std::move(iter))
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator++() noexcept -> iterator& {
+  ++iter_;
+  return *this;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator++(int) noexcept -> iterator {
+  return iterator(iter_++);
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator*() const noexcept -> value_type& {
+  return static_cast<value_type&>(iter_.operator*());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator->() const noexcept -> value_type* {
+  return static_cast<value_type*>(iter_.operator->());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator==(const iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::const_iterator() noexcept = default;
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::const_iterator(const iterator& y) noexcept
+: iter_(y.iter_)
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::const_iterator(basic_hashtable_algorithms::const_iterator iter) noexcept
+: iter_(std::move(iter))
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator++() noexcept -> const_iterator& {
+  ++iter_;
+  return *this;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator++(int) noexcept -> const_iterator {
+  return const_iterator(iter_++);
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator*() const noexcept -> const value_type& {
+  return static_cast<const value_type&>(iter_.operator*());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator->() const noexcept -> const value_type* {
+  return static_cast<const value_type*>(iter_.operator->());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator==(const iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::range::range() noexcept = default;
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::range::range(iterator b, iterator e) noexcept
+: b(b), e(e)
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::range::begin() const noexcept -> iterator {
+  return b;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::range::end() const noexcept -> iterator {
+  return e;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::range::empty() const noexcept -> bool {
+  return b == e;
+}
+
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::const_range::const_range() noexcept = default;
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::const_range::const_range(const range& y) noexcept
+: const_range(y.begin(), y.end())
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable_helper_<KeyType, Mapper, Policies...>::const_range::const_range(iterator b, iterator e) noexcept
+: b(b), e(e)
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_range::begin() const noexcept -> iterator {
+  return b;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_range::end() const noexcept -> iterator {
+  return e;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_range::empty() const noexcept -> bool {
+  return b == e;
+}
+
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename... Args>
+inline hashtable<KeyType, Mapper, Policies...>::hashtable(const std::tuple<Args...>& args, allocator_type allocator)
+: basic_hashtable_allocator_member<allocator_type>(allocator),
+  bht(allocator),
+  hashtable_helper_<KeyType, Mapper, Policies...>::ht_base(args, allocator)
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename... Args>
+inline hashtable<KeyType, Mapper, Policies...>::hashtable(const std::tuple<Args...>& args, float max_load_factor, allocator_type allocator)
+: basic_hashtable_allocator_member<allocator_type>(allocator),
+  bht(max_load_factor, allocator),
+  hashtable_helper_<KeyType, Mapper, Policies...>::ht_base(args, allocator)
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable<KeyType, Mapper, Policies...>::~hashtable() {
+  this->clear_and_dispose(disposer_());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::reserve(size_type sz) -> void {
+  this->bht::reserve(sz, [this]() { this->unlink_expired_elements_(); });
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::get_if_exists(std::size_t hash, function_ref<bool(const key_type&)> matcher) const noexcept(noexcept(std::declval<const value_type&>().get_if_matching(std::declval<function_ref<bool(const key_type&)>>(), std::false_type()))) -> std::variant<std::monostate, mapped_type, error_type> {
+  for (const auto& elem : bucket_for_hash_(hash)) {
+    if (elem.hash() != hash) continue;
+    auto result = elem.get_if_matching(matcher, std::false_type());
+    if (result.index() != 0 && !elem.expired())
+      return result;
+  }
+  return {};
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<bool IncludePending>
+inline auto hashtable<KeyType, Mapper, Policies...>::get(std::size_t hash, function_ref<const key_type&> matcher, std::integral_constant<bool, IncludePending> include_pending)
+-> std::conditional_t<
+    IncludePending,
+    std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+    std::variant<std::monostate, mapped_type, error_type>> {
+  using return_type = std::conditional_t<
+      IncludePending,
+      std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+      std::variant<std::monostate, mapped_type, error_type>>;
+
+  const auto bucket_idx = this->bucket_for(hash);
+  auto before_i = typename helper_type::iterator(this->bht::before_begin(bucket_idx)),
+       before_e = typename helper_type::iterator(this->bht::before_end(bucket_idx));
+  while (before_i != before_e) {
+    const auto iter = std::next(before_i);
+    if (iter->hash() != hash) { // If hashcode mismatches, we only need to maybe clean up if it's expired.
+      if (iter->expired() && !iter->pending()) {
+        if (iter == before_e) before_e = before_i;
+        this->unlink_and_dispose(before_i, disposer_());
+        continue;
+      }
+    } else {
+      // Note: we must read the value before checking `expired`.
+      // This is because the expired state can change concurrently,
+      // and this way, we ensure we only have the value acquired
+      // if it really was not-expired.
+      auto val = iter->get_if_matching(matcher, include_pending);
+      if (iter->expired()) {
+        if (iter->pending()) {
+          // Pending items are never removed.
+          // This is because the destructor of the cache needs to
+          // cancel any outstanding requests.
+          before_i = iter;
+        } else {
+          // Cleanup expired element.
+          if (iter == before_e) before_e = before_i;
+          this->unlink_and_dispose(before_i, disposer_());
+        }
+        continue;
+      }
+
+      // Return value if it was found.
+      if (val.index() != 0) return val;
+    }
+
+    // No match and no expiry. Advance to next element.
+    before_i = iter;
+  }
+  return {};
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::expire_all() noexcept -> void {
+  auto before_iter = this->bht::before_begin(),
+       before_end = this->bht::before_end();
+  while (before_iter != before_end) {
+    auto iter = std::next(before_iter);
+    if (iter->pending()) {
+      iter->mark_expired();
+      before_iter = iter;
+    } else {
+      if (before_end == iter) before_end = before_iter;
+      this->unlink_and_dispose_(before_iter, disposer_());
+    }
+  }
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::expire(std::size_t hash, function_ref<bool(const key_type&)> matcher) -> void {
+  const auto bucket_idx = this->bucket_for(hash);
+  auto before_i = typename helper_type::iterator(this->bht::before_begin(bucket_idx)),
+       before_e = typename helper_type::iterator(this->bht::before_end(bucket_idx));
+  while (before_i != before_e) {
+    const auto iter = std::next(before_i);
+    if (iter->hash() == hash && iter->matches(matcher)) {
+      if (iter->pending()) {
+        iter->mark_expired();
+      } else {
+        // Expire by just dropping it from the cache entirely.
+        if (iter == before_e) before_e = before_i;
+        this->unlink_and_dispose(before_i.iter_, disposer_());
+        continue;
+      }
+    } else {
+      // Clean up any expired items we pass by in our search.
+      if (iter->expired() && !iter->pending()) {
+        if (iter == before_e) before_e = before_i;
+        this->unlink_and_dispose(before_i.iter_, disposer_());
+        continue;
+      }
+    }
+
+    // No unlinking. Advance to next element.
+    before_i = iter;
+  }
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename... Args>
+inline auto hashtable<KeyType, Mapper, Policies...>::allocate_value_type(Args&&... args) -> value_pointer {
+  return allocate_refcount<value_type>(this->basic_hashtable_allocator_member<allocator_type>::alloc, *this, std::forward<Args>(args)...);
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::link(std::size_t hash, value_pointer vptr) -> void {
+  const auto before_inserted_iter = this->bht::link(hash, vptr.get(), [this]() { this->unlink_expired_elements_(); }); // may throw
+  this->on_create_(vptr.get()); // never throws
+  if (!vptr->pending()) this->on_assign_(vptr.get(), vptr->holds_value(), false); // never throws
+  vptr.release(); // never throws
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::assign_value_callback(const value_pointer& vptr) -> callback_fn {
+  return [weakself=this->weak_from_this(), vptr=vptr.get()]([[maybe_unused]] const mapped_type& v, const error_type& ex) {
+    const std::shared_ptr<hashtable> self = weakself.lock();
+    if (self)
+#if __has_cpp_attribute(likely)
+      [[likely]]
+#endif
+    {
+      const bool holds_value = !ex; // Do this before the lock, just in case it throws an exception.
+      self->lock();
+      self->on_assign_(vptr, holds_value, true);
+      self->unlock();
+    }
+  };
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::begin() noexcept -> iterator {
+  return iterator(this->bht::begin());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::end() noexcept -> iterator {
+  return iterator(this->bht::end());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::begin() const noexcept -> const_iterator {
+  return const_iterator(this->bht::begin());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::end() const noexcept -> const_iterator {
+  return const_iterator(this->bht::end());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::cbegin() const noexcept -> const_iterator {
+  return const_iterator(this->bht::cbegin());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::cend() const noexcept -> const_iterator {
+  return const_iterator(this->bht::cend());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename Hasher, typename Equals, typename... KeyArgs, typename... MappedArgs>
+inline auto hashtable<KeyType, Mapper, Policies...>::emplace(const Hasher& hasher, const Equals& equals, std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args) -> void {
+  const auto hash = std::apply(hasher, key_args);
+  expire(
+      hash,
+      [&equals, &key_args](const key_type& key) {
+        return std::apply(
+            [&equals, &key]<typename... Args>(const Args&... key_args) {
+              return std::invoke(equals, key, key_args...);
+            },
+            key_args);
+      });
+  link(hash, allocate_value_type(pc, std::move(key_args), std::move(mapped_args)));
+
+  maintenance_();
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename Hasher, typename Equals, typename KeyArg, typename MappedArg>
+inline auto hashtable<KeyType, Mapper, Policies...>::emplace(const Hasher& hasher, const Equals& equals, KeyArg&& key_arg, MappedArg&& mapped_arg)
+-> std::enable_if_t<std::is_constructible_v<key_type, KeyArg> && std::is_constructible_v<mapped_type, MappedArg>> {
+  const auto hash = std::invoke(hasher, key_arg);
+  expire(
+      hash,
+      [&equals, &key_arg](const key_type& key) {
+        return std::invoke(equals, key, key_arg);
+      });
+  link(hash, allocate_value_type(std::piecewise_construct, std::forward_as_tuple(std::forward<KeyArg>(key_arg)), std::forward_as_tuple(std::forward<MappedArg>(mapped_arg))));
+
+  maintenance_();
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::count() const noexcept -> size_type {
+  return std::count_if(begin(), end(), [](const value_type& v) { return !v.expired(); });
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::maintenance_() noexcept -> void {
+  if constexpr(helper_type::ht_base::has_policy_removal_check)
+    this->lru_expire_(this->helper_type::ht_base::policy_removal_check_());
+
+  // Allow policies each to do any other maintenance.
+  this->helper_type::ht_base::on_maintenance_();
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::bucket_for_hash_(std::size_t hash) noexcept -> typename helper_type::range {
+  const auto bucket_idx = this->bucket_for(hash);
+  return typename helper_type::range(this->bht::begin(bucket_idx), this->bht::end(bucket_idx));
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::bucket_for_hash_(std::size_t hash) const noexcept -> typename helper_type::const_range {
+  const auto bucket_idx = this->bucket_for(hash);
+  return typename helper_type::const_range(typename helper_type::const_iterator(this->bht::begin(bucket_idx)), typename helper_type::const_iterator(this->bht::end(bucket_idx)));
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::unlink_expired_elements_() -> void {
+  auto before_i = typename helper_type::iterator(this->bht::before_begin()),
+       before_e = typename helper_type::iterator(this->bht::before_end());
+  while (before_i != before_e) {
+    const auto iter = std::next(before_i);
+    if (iter->expired() && !iter->pending()) {
+      if (before_e == iter) before_e = before_i;
+      this->unlink_and_dispose(before_i.iter_, disposer_());
+    } else {
+      before_i = iter;
+    }
+  }
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::disposer_() noexcept -> disposer_impl {
+  return disposer_impl(*this);
+}
+
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline hashtable<KeyType, Mapper, Policies...>::disposer_impl::disposer_impl(hashtable& self) noexcept
+: self(self)
+{}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable<KeyType, Mapper, Policies...>::disposer_impl::operator()(basic_hashtable_element* base_elem) noexcept -> void {
+  value_type* elem = static_cast<value_type*>(base_elem);
+  elem->cancel(); // never throws
+  self.on_unlink_(elem); // never throws
+  if (refcount_dec(elem)) {
+    std::allocator_traits<allocator_type>::destroy(self.basic_hashtable_allocator_member<allocator_type>::alloc, elem);
+    std::allocator_traits<allocator_type>::deallocate(self.basic_hashtable_allocator_member<allocator_type>::alloc, elem, 1);
+  }
+}
+
+
+} /* namespace libhoard::detail */

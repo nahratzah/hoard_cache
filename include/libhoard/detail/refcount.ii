@@ -1,0 +1,257 @@
+#pragma once
+
+namespace libhoard::detail {
+
+
+inline auto refcount_inc(const refcount* r) noexcept -> void {
+  r->n_.fetch_add(1u, std::memory_order_relaxed);
+}
+
+inline auto refcount_dec(const refcount* r) noexcept -> bool {
+  return r->n_.fetch_sub(1u, std::memory_order_release) == 1u;
+}
+
+template<typename T, typename Allocator, typename... Args>
+auto allocate_refcount(Allocator&& allocator, Args&&... args) -> refcount_ptr<T, std::decay_t<Allocator>> {
+  using alloc_traits = std::allocator_traits<std::decay_t<Allocator>>;
+
+  refcount_ptr<T, std::decay_t<Allocator>> rptr(std::forward<Allocator>(allocator)); // may throw, may invalidate allocator
+
+  T*const ptr = alloc_traits::allocate(rptr.alloc_, 1); // may throw
+#if __cpp_exceptions >= 199711
+  try
+#endif
+  {
+    alloc_traits::construct(rptr.alloc_, ptr, std::forward<Args>(args)...); // may throw
+  }
+#if __cpp_exceptions >= 199711
+  catch (...) {
+    alloc_traits::deallocate(rptr.alloc_, ptr, 1); // Free memory if constructor fails.
+    throw;
+  }
+#endif
+
+  refcount_ptr<T, std::decay_t<Allocator>>::inc_(ptr); // never throws
+  rptr.ptr_ = ptr; // never throws
+  return rptr;
+}
+
+inline refcount::refcount() noexcept {}
+inline refcount::refcount(const refcount&) noexcept {}
+inline refcount::refcount(refcount&&) noexcept {}
+inline refcount::~refcount() noexcept = default;
+
+inline auto refcount::operator=(const refcount&) noexcept -> refcount& {
+  return *this;
+}
+
+inline auto refcount::operator=(refcount&&) noexcept -> refcount& {
+  return *this;
+}
+
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::refcount_ptr(element_type* ptr, const allocator_type& alloc) noexcept(std::is_nothrow_copy_constructible_v<allocator_type>)
+: alloc_(alloc),
+  ptr_(ptr) // never throws
+{}
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::refcount_ptr(element_type* ptr, allocator_type&& alloc) noexcept(std::is_nothrow_move_constructible_v<allocator_type>)
+: alloc_(std::move(alloc)),
+  ptr_(ptr) // never throws
+{}
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::refcount_ptr(allocator_type alloc) noexcept(std::is_nothrow_move_constructible_v<allocator_type>)
+: alloc_(std::move(alloc))
+{}
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::refcount_ptr([[maybe_unused]] std::nullptr_t nil, allocator_type alloc) noexcept(std::is_nothrow_move_constructible_v<allocator_type>)
+: alloc_(std::move(alloc))
+{}
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::refcount_ptr(const refcount_ptr& y) noexcept(std::is_nothrow_copy_constructible_v<allocator_type>)
+: alloc_(y.alloc_),
+  ptr_(y.ptr_)
+{
+  if (ptr_) refcount_ptr::inc_(ptr_); // never throws
+}
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::refcount_ptr(refcount_ptr&& y) noexcept(std::is_nothrow_copy_constructible_v<allocator_type> || std::is_nothrow_move_constructible_v<allocator_type>)
+: alloc_(std::move_if_noexcept(y.alloc_)),
+  ptr_(std::exchange(y.ptr_, nullptr)) // Note: clearing y.ptr may only happen after allocator has been copied!
+{}
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::~refcount_ptr() noexcept {
+  reset();
+}
+
+template<typename T, typename Allocator>
+template<typename U, typename>
+inline refcount_ptr<T, Allocator>::refcount_ptr(const refcount_ptr<U, allocator_type>& y) noexcept(std::is_nothrow_copy_constructible_v<allocator_type>)
+: alloc_(y.alloc_),
+  ptr_(y.ptr_)
+{
+  if (ptr_) refcount_ptr::inc_(ptr_); // never throws
+}
+
+template<typename T, typename Allocator>
+template<typename U, typename>
+inline refcount_ptr<T, Allocator>::refcount_ptr(refcount_ptr<U, allocator_type>&& y) noexcept(std::is_nothrow_copy_constructible_v<allocator_type> || std::is_nothrow_move_constructible_v<allocator_type>)
+: alloc_(std::move_if_noexcept(y.alloc_)),
+  ptr_(std::exchange(y.ptr_, nullptr)) // Note: clearing y.ptr may only happen after allocator has been copied!
+{}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator=(const refcount_ptr& y) noexcept(std::is_nothrow_copy_constructible_v<allocator_type> && std::is_nothrow_copy_assignable_v<allocator_type>) -> refcount_ptr& {
+  // Algorithm cannot handle self-assignment, so we must check here.
+  if (&y == this) return *this;
+
+  // Hand over ownership of current value to 'orig'.
+  auto orig = refcount_ptr(ptr_, alloc_); // May throw.
+  ptr_ = nullptr; // 'orig' now owns the original value.
+
+  // Copy the allocator.
+  alloc_ = y.alloc_; // May throw.
+
+  // Copy the pointer.
+  ptr_ = y.ptr_;
+  if (ptr_) refcount_ptr::inc_(ptr_);
+
+  return *this;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator=(refcount_ptr&& y) noexcept(std::is_nothrow_copy_constructible_v<allocator_type> && std::is_nothrow_copy_assignable_v<allocator_type>) -> refcount_ptr& {
+  // Algorithm cannot handle self-assignment, so we must check here.
+  if (&y == this) return *this;
+
+  // Hand over ownership of current value to 'orig'.
+  auto orig = refcount_ptr(ptr_, alloc_); // May throw.
+  ptr_ = nullptr; // 'orig' now owns the original value.
+
+  // Copy the allocator.
+  alloc_ = y.alloc_; // May throw.
+
+  // Move the pointer.
+  ptr_ = std::exchange(y.ptr_, nullptr);
+
+  return *this;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator=(std::nullptr_t y) noexcept -> refcount_ptr& {
+  reset();
+  return *this;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::adopt(element_type* ptr) noexcept -> refcount_ptr& {
+  if (*this) {
+    // Hand over ownership of current value to 'orig'.
+    auto orig = refcount_ptr(ptr_, alloc_); // May throw.
+    ptr_ = nullptr; // 'orig' now owns the original value.
+
+    // Move the pointer.
+    ptr_ = ptr;
+  } else {
+    // this holds a nil, so we can just assign straight away and avoid exceptions
+    ptr_ = ptr;
+  }
+
+  return *this;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::get_allocator() const noexcept(std::is_nothrow_copy_constructible_v<allocator_type>) -> allocator_type {
+  return alloc_;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::get() const noexcept -> element_type* {
+  return ptr_;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator*() const noexcept -> element_type& {
+  return *ptr_;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator->() const noexcept -> element_type* {
+  return ptr_;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::release() noexcept -> element_type* {
+  return std::exchange(ptr_, nullptr);
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::reset() -> void {
+  if (ptr_ && refcount_ptr::dec_(ptr_)) {
+    // We move the pointer into a local variable first.
+    // Because the destructors are permitted to throw.
+    // (In which case a memory leak is probably better
+    // than causing undefined behaviour later.)
+    std::remove_const_t<T>* old_ptr = const_cast<std::remove_const_t<T>*>(std::exchange(ptr_, nullptr));
+
+    std::allocator_traits<allocator_type>::destroy(alloc_, old_ptr); // May throw.
+    std::allocator_traits<allocator_type>::deallocate(alloc_, old_ptr, 1); // May throw.
+  }
+}
+
+template<typename T, typename Allocator>
+inline refcount_ptr<T, Allocator>::operator bool() const noexcept {
+  return ptr_ != nullptr;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator==([[maybe_unused]] std::nullptr_t nil) const noexcept -> bool {
+  return ptr_ == nullptr;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator!=([[maybe_unused]] std::nullptr_t nil) const noexcept -> bool {
+  return ptr_ != nullptr;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator==(const refcount_ptr& y) const noexcept -> bool {
+  return ptr_ == y.ptr_;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::operator!=(const refcount_ptr& y) const noexcept -> bool {
+  return ptr_ != y.ptr_;
+}
+
+template<typename T, typename Allocator>
+template<typename U, typename AllocatorU>
+inline auto refcount_ptr<T, Allocator>::operator==(const refcount_ptr<U, AllocatorU>& y) const noexcept -> bool {
+  return ptr_ == y.ptr_;
+}
+
+template<typename T, typename Allocator>
+template<typename U, typename AllocatorU>
+inline auto refcount_ptr<T, Allocator>::operator!=(const refcount_ptr<U, AllocatorU>& y) const noexcept -> bool {
+  return ptr_ != y.ptr_;
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::inc_(const refcount* r) noexcept -> void {
+  refcount_inc(r);
+}
+
+template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::dec_(const refcount* r) noexcept -> bool {
+  return refcount_dec(r);
+}
+
+
+} /* namespace libhoard::detail */

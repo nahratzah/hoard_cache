@@ -1,0 +1,44 @@
+#pragma once
+
+#include <functional>
+#include <memory>
+#include <utility>
+
+namespace libhoard::detail {
+
+
+template<typename R, typename... Args>
+template<typename Fn>
+inline function_ref<R(Args...)>::function_ref(Fn&& fn) noexcept
+: internal_([](void* vref, Args... args) -> R {
+      return std::invoke(
+          *static_cast<std::remove_reference_t<Fn>*>(vref), // reintroduces const/volatile modifiers.
+          std::forward<Args>(args)...);
+    }),
+  ref_(const_cast<std::remove_cvref_t<Fn>*>(std::addressof(fn)))
+{}
+
+template<typename R, typename... Args>
+inline auto function_ref<R(Args...)>::operator()(Args... args) const -> R {
+  return std::invoke(internal_, ref_, std::forward<Args>(args)...);
+}
+
+
+template<typename R, typename... Args>
+template<typename Fn>
+inline function_ref<R(Args...) noexcept>::function_ref(Fn&& fn) noexcept
+: internal_([](void* vref, Args... args) noexcept -> R {
+      return std::invoke(
+          *static_cast<std::remove_reference_t<Fn>*>(vref), // reintroduces const/volatile modifiers.
+          std::forward<Args>(args)...);
+    }),
+  ref_(const_cast<std::remove_cvref_t<Fn>*>(std::addressof(fn)))
+{}
+
+template<typename R, typename... Args>
+inline auto function_ref<R(Args...) noexcept>::operator()(Args... args) const noexcept -> R {
+  return std::invoke(internal_, ref_, std::forward<Args>(args)...);
+}
+
+
+} /* namespace libhoard::detail */

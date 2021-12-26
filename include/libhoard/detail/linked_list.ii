@@ -1,0 +1,441 @@
+#pragma once
+
+#include <utility>
+
+namespace libhoard::detail {
+
+
+inline basic_linked_list::link::link() noexcept = default;
+
+inline basic_linked_list::link::link([[maybe_unused]] const link& y) noexcept
+{}
+
+inline basic_linked_list::link::link([[maybe_unused]] link&& y) noexcept
+{}
+
+inline basic_linked_list::link::~link() noexcept = default;
+
+inline auto basic_linked_list::link::operator=([[maybe_unused]] const link& y) noexcept -> link& {
+  return *this;
+}
+
+inline auto basic_linked_list::link::operator=([[maybe_unused]] link&& y) noexcept -> link& {
+  return *this;
+}
+
+inline constexpr basic_linked_list::link::link(link* pred, link* succ) noexcept
+: succ_(succ),
+  pred_(pred)
+{}
+
+
+inline basic_linked_list::basic_linked_list() noexcept
+: head_(&head_, &head_)
+{}
+
+inline basic_linked_list::basic_linked_list(basic_linked_list&& y) noexcept
+: head_(std::exchange(y.head_.pred_, &y.head_), std::exchange(y.head_.succ_, &y.head_))
+{
+  head_.pred_->succ_ = head_.succ_->pred_ = &head_;
+}
+
+inline auto basic_linked_list::link_front(link* elem) noexcept -> iterator {
+  link_(&head_, elem, head_.succ_);
+  return iterator(elem);
+}
+
+inline auto basic_linked_list::link_back(link* elem) noexcept -> iterator {
+  link_(head_.pred_, elem, &head_);
+  return iterator(elem);
+}
+
+inline auto basic_linked_list::link_after(const_iterator pos, link* elem) noexcept -> iterator {
+  link_(const_cast<link*>(pos.ptr_), elem, pos.ptr_->succ_);
+  return iterator(elem);
+}
+
+inline auto basic_linked_list::link_before(const_iterator pos, link* elem) noexcept -> iterator {
+  link_(pos.ptr_->pred_, elem, const_cast<link*>(pos.ptr_));
+  return iterator(elem);
+}
+
+inline auto basic_linked_list::unlink(const_iterator iter) noexcept -> iterator {
+  link*const elem = const_cast<link*>(iter.ptr_);
+  link*const predecessor = elem->pred_;
+  link*const successor = elem->succ_;
+
+  predecessor->succ_ = successor;
+  successor->pred_ = predecessor;
+  elem->pred_ = elem->succ_ = nullptr;
+
+  return iterator(successor);
+}
+
+inline auto basic_linked_list::empty() const noexcept -> bool {
+  return head_.succ_ == &head_;
+}
+
+inline auto basic_linked_list::iterator_to(link* v) noexcept -> iterator {
+  return iterator(v);
+}
+
+inline auto basic_linked_list::iterator_to(const link* v) noexcept -> const_iterator {
+  return const_iterator(v);
+}
+
+inline auto basic_linked_list::begin() noexcept -> iterator {
+  return iterator(head_.succ_);
+}
+
+inline auto basic_linked_list::end() noexcept -> iterator {
+  return iterator(&head_);
+}
+
+inline auto basic_linked_list::begin() const noexcept -> const_iterator {
+  return const_iterator(head_.succ_);
+}
+
+inline auto basic_linked_list::end() const noexcept -> const_iterator {
+  return const_iterator(&head_);
+}
+
+inline auto basic_linked_list::cbegin() const noexcept -> const_iterator {
+  return const_iterator(head_.succ_);
+}
+
+inline auto basic_linked_list::cend() const noexcept -> const_iterator {
+  return const_iterator(&head_);
+}
+
+inline auto basic_linked_list::link_(link* predecessor, link* elem, link* successor) noexcept -> void {
+  elem->pred_ = predecessor;
+  elem->succ_ = successor;
+  predecessor->succ_ = successor->pred_ = elem;
+}
+
+
+inline basic_linked_list::iterator::iterator() noexcept = default;
+
+inline basic_linked_list::iterator::iterator(link* ptr) noexcept : ptr_(ptr) {}
+
+inline auto basic_linked_list::iterator::operator++() noexcept -> iterator& {
+  ptr_ = ptr_->succ_;
+  return *this;
+}
+
+inline auto basic_linked_list::iterator::operator++(int) noexcept -> iterator {
+  auto copy = *this;
+  ++*this;
+  return copy;
+}
+
+inline auto basic_linked_list::iterator::operator--() noexcept -> iterator& {
+  ptr_ = ptr_->pred_;
+  return *this;
+}
+
+inline auto basic_linked_list::iterator::operator--(int) noexcept -> iterator {
+  auto copy = *this;
+  --*this;
+  return copy;
+}
+
+inline auto basic_linked_list::iterator::get() const noexcept -> link* {
+  return ptr_;
+}
+
+inline auto basic_linked_list::iterator::operator*() const noexcept -> link& {
+  return *ptr_;
+}
+
+inline auto basic_linked_list::iterator::operator->() const noexcept -> link* {
+  return ptr_;
+}
+
+inline auto basic_linked_list::iterator::operator==(const iterator& y) const noexcept -> bool {
+  return ptr_ == y.ptr_;
+}
+
+inline auto basic_linked_list::iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return ptr_ != y.ptr_;
+}
+
+inline auto basic_linked_list::iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return ptr_ == y.ptr_;
+}
+
+inline auto basic_linked_list::iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return ptr_ != y.ptr_;
+}
+
+
+inline basic_linked_list::const_iterator::const_iterator() noexcept = default;
+
+inline basic_linked_list::const_iterator::const_iterator(const iterator& y) noexcept
+: ptr_(y.ptr_)
+{}
+
+inline basic_linked_list::const_iterator::const_iterator(const link* ptr) noexcept
+: ptr_(ptr)
+{}
+
+inline auto basic_linked_list::const_iterator::operator++() noexcept -> const_iterator& {
+  ptr_ = ptr_->succ_;
+  return *this;
+}
+
+inline auto basic_linked_list::const_iterator::operator++(int) noexcept -> const_iterator {
+  auto copy = *this;
+  ++*this;
+  return copy;
+}
+
+inline auto basic_linked_list::const_iterator::operator--() noexcept -> const_iterator& {
+  ptr_ = ptr_->pred_;
+  return *this;
+}
+
+inline auto basic_linked_list::const_iterator::operator--(int) noexcept -> const_iterator {
+  auto copy = *this;
+  --*this;
+  return copy;
+}
+
+inline auto basic_linked_list::const_iterator::get() const noexcept -> const link* {
+  return ptr_;
+}
+
+inline auto basic_linked_list::const_iterator::operator*() const noexcept -> const link& {
+  return *ptr_;
+}
+
+inline auto basic_linked_list::const_iterator::operator->() const noexcept -> const link* {
+  return ptr_;
+}
+
+inline auto basic_linked_list::const_iterator::operator==(const iterator& y) const noexcept -> bool {
+  return ptr_ == y.ptr_;
+}
+
+inline auto basic_linked_list::const_iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return ptr_ != y.ptr_;
+}
+
+inline auto basic_linked_list::const_iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return ptr_ == y.ptr_;
+}
+
+inline auto basic_linked_list::const_iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return ptr_ != y.ptr_;
+}
+
+
+template<typename T>
+inline auto linked_list<T>::link_front(value_type* elem) noexcept -> iterator {
+  return iterator(impl_.link_front(elem));
+}
+
+template<typename T>
+inline auto linked_list<T>::link_back(value_type* elem) noexcept -> iterator {
+  return iterator(impl_.link_back(elem));
+}
+
+template<typename T>
+inline auto linked_list<T>::link_before(const_iterator pos, value_type* elem) noexcept -> iterator {
+  return iterator(impl_.link_before(pos.iter_, elem));
+}
+
+template<typename T>
+inline auto linked_list<T>::link_after(const_iterator pos, value_type* elem) noexcept -> iterator {
+  return iterator(impl_.link_after(pos.iter_, elem));
+}
+
+template<typename T>
+inline auto linked_list<T>::unlink(const_iterator iter) noexcept -> iterator {
+  return iterator(impl_.unlink(iter.iter_));
+}
+
+template<typename T>
+inline auto linked_list<T>::begin() noexcept -> iterator {
+  return iterator(impl_.begin());
+}
+
+template<typename T>
+inline auto linked_list<T>::end() noexcept -> iterator {
+  return iterator(impl_.end());
+}
+
+template<typename T>
+inline auto linked_list<T>::begin() const noexcept -> const_iterator {
+  return const_iterator(impl_.begin());
+}
+
+template<typename T>
+inline auto linked_list<T>::end() const noexcept -> const_iterator {
+  return const_iterator(impl_.end());
+}
+
+template<typename T>
+inline auto linked_list<T>::cbegin() const noexcept -> const_iterator {
+  return const_iterator(impl_.begin());
+}
+
+template<typename T>
+inline auto linked_list<T>::cend() const noexcept -> const_iterator {
+  return const_iterator(impl_.end());
+}
+
+template<typename T>
+inline auto linked_list<T>::empty() const noexcept -> bool {
+  return impl_.empty();
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator_to(value_type* v) noexcept -> iterator {
+  return iterator(basic_linked_list::iterator_to(v));
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator_to(const value_type* v) noexcept -> const_iterator {
+  return const_iterator(basic_linked_list::iterator_to(v));
+}
+
+
+template<typename T>
+inline linked_list<T>::iterator::iterator() noexcept = default;
+
+template<typename T>
+inline linked_list<T>::iterator::iterator(basic_linked_list::iterator iter) noexcept
+: iter_(std::move(iter))
+{}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator++() noexcept -> iterator& {
+  ++iter_;
+  return *this;
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator++(int) noexcept -> iterator {
+  return iterator(iter_++);
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator--() noexcept -> iterator& {
+  --iter_;
+  return *this;
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator--(int) noexcept -> iterator {
+  return iterator(iter_--);
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::get() const noexcept -> T* {
+  return static_cast<T*>(iter_.get());
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator*() const noexcept -> T& {
+  return *get();
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator->() const noexcept -> T* {
+  return get();
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator==(const iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename T>
+inline auto linked_list<T>::iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+
+template<typename T>
+inline linked_list<T>::const_iterator::const_iterator() noexcept = default;
+
+template<typename T>
+inline linked_list<T>::const_iterator::const_iterator(const iterator& y) noexcept
+: iter_(y.iter_)
+{}
+
+template<typename T>
+inline linked_list<T>::const_iterator::const_iterator(basic_linked_list::const_iterator iter) noexcept
+: iter_(std::move(iter))
+{}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator++() noexcept -> const_iterator& {
+  ++iter_;
+  return *this;
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator++(int) noexcept -> const_iterator {
+  return iterator(iter_++);
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator--() noexcept -> const_iterator& {
+  --iter_;
+  return *this;
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator--(int) noexcept -> const_iterator {
+  return iterator(iter_--);
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::get() const noexcept -> const T* {
+  return static_cast<const T*>(iter_.get());
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator*() const noexcept -> const T& {
+  return *get();
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator->() const noexcept -> const T* {
+  return get();
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator==(const iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return iter_ == y.iter_;
+}
+
+template<typename T>
+inline auto linked_list<T>::const_iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return iter_ != y.iter_;
+}
+
+
+} /* namespace libhoard::detail */

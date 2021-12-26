@@ -1,0 +1,426 @@
+#pragma once
+
+namespace libhoard::detail {
+
+
+template<typename Allocator>
+inline basic_hashtable_allocator_member<Allocator>::basic_hashtable_allocator_member(allocator_type allocator)
+: alloc(std::move(allocator))
+{}
+
+template<typename Allocator>
+inline auto basic_hashtable_allocator_member<Allocator>::get_allocator() const noexcept(std::is_nothrow_copy_constructible_v<allocator_type>) -> allocator_type {
+  return alloc;
+}
+
+
+inline basic_hashtable_algorithms::basic_hashtable_algorithms() noexcept = default;
+
+inline basic_hashtable_algorithms::basic_hashtable_algorithms(basic_hashtable_algorithms&& y) noexcept
+: head_(std::exchange(y.head_, nullptr)),
+  buckets_(std::exchange(y.buckets_, nullptr)),
+  bucket_count_(std::exchange(y.bucket_count_, 0u)),
+  size_(std::exchange(y.size_, 0))
+{
+  std::for_each_n(buckets_, bucket_count_,
+      [this, &y](successor_ptr& ptr) {
+        if (ptr == &y.head_) ptr = &this->head_;
+      });
+}
+
+inline auto basic_hashtable_algorithms::empty() const noexcept -> bool {
+  return head_ == nullptr;
+}
+
+inline auto basic_hashtable_algorithms::size() const noexcept -> size_type {
+  return size_;
+}
+
+inline auto basic_hashtable_algorithms::bucket_count() const noexcept -> size_type {
+  return bucket_count_;
+}
+
+inline auto basic_hashtable_algorithms::load_factor() const noexcept -> float {
+  return empty() ? 0.0 : float(size()) / float(bucket_count());
+}
+
+inline auto basic_hashtable_algorithms::clear() noexcept -> void {
+  head_ = nullptr;
+  std::fill_n(buckets_, bucket_count_, &head_);
+  size_ = 0;
+}
+
+template<typename DisposeCb>
+inline auto basic_hashtable_algorithms::clear_and_dispose(DisposeCb&& dispose_cb) noexcept(std::is_nothrow_invocable_v<DisposeCb, element*>) -> void {
+  if constexpr(std::is_nothrow_invocable_v<DisposeCb&, element*>) {
+    while (head_ != nullptr) {
+      element_ptr ptr = head_;
+      head_ = std::exchange(ptr->successor_, nullptr);
+      std::invoke(dispose_cb, std::move(ptr));
+    }
+    std::fill_n(buckets_, bucket_count_, &head_);
+    size_ = 0;
+  } else {
+    // to maintain weak exception guarantee, we need to unlink elements one-at-a-time
+    while (head_ != nullptr) std::invoke(dispose_cb, unlink_(&head_));
+  }
+}
+
+inline auto basic_hashtable_algorithms::unlink(const_iterator predecessor) noexcept -> element* {
+  return unlink_(const_cast<element_ptr*>(predecessor.s_));
+}
+
+template<typename DisposeCb>
+inline auto basic_hashtable_algorithms::unlink_and_dispose(const_iterator predecessor, DisposeCb&& dispose_cb) noexcept(std::is_nothrow_invocable_v<DisposeCb, element*>) -> void {
+  std::invoke(std::forward<DisposeCb>(dispose_cb), unlink(predecessor));
+}
+
+inline auto basic_hashtable_algorithms::begin() noexcept -> iterator {
+  return ++before_begin();
+}
+
+inline auto basic_hashtable_algorithms::end() noexcept -> iterator {
+  return iterator(nullptr);
+}
+
+inline auto basic_hashtable_algorithms::begin() const noexcept -> const_iterator {
+  return ++before_begin();
+}
+
+inline auto basic_hashtable_algorithms::end() const noexcept -> const_iterator {
+  return const_iterator(nullptr);
+}
+
+inline auto basic_hashtable_algorithms::cbegin() const noexcept -> const_iterator {
+  return ++cbefore_begin();
+}
+
+inline auto basic_hashtable_algorithms::cend() const noexcept -> const_iterator {
+  return const_iterator(nullptr);
+}
+
+inline auto basic_hashtable_algorithms::before_begin() noexcept -> iterator {
+  return iterator(&head_);
+}
+
+inline auto basic_hashtable_algorithms::before_end() noexcept -> iterator {
+  return iterator(bucket_count_ == 0u ? &head_ : buckets_[bucket_count_ - 1u]);
+}
+
+inline auto basic_hashtable_algorithms::before_begin() const noexcept -> const_iterator {
+  return const_iterator(&head_);
+}
+
+inline auto basic_hashtable_algorithms::before_end() const noexcept -> const_iterator {
+  return const_iterator(bucket_count_ == 0u ? &head_ : buckets_[bucket_count_ - 1u]);
+}
+
+inline auto basic_hashtable_algorithms::cbefore_begin() const noexcept -> const_iterator {
+  return const_iterator(&head_);
+}
+
+inline auto basic_hashtable_algorithms::cbefore_end() const noexcept -> const_iterator {
+  return const_iterator(bucket_count_ == 0u ? &head_ : buckets_[bucket_count_ - 1u]);
+}
+
+inline auto basic_hashtable_algorithms::begin(size_type bucket_idx) noexcept -> iterator {
+  return ++before_begin(bucket_idx);
+}
+
+inline auto basic_hashtable_algorithms::end(size_type bucket_idx) noexcept -> iterator {
+  return ++before_end(bucket_idx);
+}
+
+inline auto basic_hashtable_algorithms::begin(size_type bucket_idx) const noexcept -> const_iterator {
+  return ++before_begin(bucket_idx);
+}
+
+inline auto basic_hashtable_algorithms::end(size_type bucket_idx) const noexcept -> const_iterator {
+  return ++before_end(bucket_idx);
+}
+
+inline auto basic_hashtable_algorithms::cbegin(size_type bucket_idx) const noexcept -> const_iterator {
+  return ++cbefore_begin(bucket_idx);
+}
+
+inline auto basic_hashtable_algorithms::cend(size_type bucket_idx) const noexcept -> const_iterator {
+  return ++cbefore_end(bucket_idx);
+}
+
+inline auto basic_hashtable_algorithms::before_begin(size_type bucket_idx) noexcept -> iterator {
+  return iterator(bucket_idx == 0u ? &head_ : buckets_[bucket_idx - 1u]);
+}
+
+inline auto basic_hashtable_algorithms::before_end(size_type bucket_idx) noexcept -> iterator {
+  return iterator(bucket_count() == 0u ? &head_ : buckets_[bucket_idx]);
+}
+
+inline auto basic_hashtable_algorithms::before_begin(size_type bucket_idx) const noexcept -> const_iterator {
+  return const_iterator(bucket_idx == 0u ? &head_ : buckets_[bucket_idx - 1u]);
+}
+
+inline auto basic_hashtable_algorithms::before_end(size_type bucket_idx) const noexcept -> const_iterator {
+  return const_iterator(bucket_count() == 0u ? &head_ : buckets_[bucket_idx]);
+}
+
+inline auto basic_hashtable_algorithms::cbefore_begin(size_type bucket_idx) const noexcept -> const_iterator {
+  return const_iterator(bucket_idx == 0u ? &head_ : buckets_[bucket_idx - 1u]);
+}
+
+inline auto basic_hashtable_algorithms::cbefore_end(size_type bucket_idx) const noexcept -> const_iterator {
+  return const_iterator(bucket_count() == 0u ? &head_ : buckets_[bucket_idx]);
+}
+
+inline auto basic_hashtable_algorithms::link_(std::size_t hash, element* elem) noexcept -> iterator {
+  const auto bucket_idx = bucket_for(hash);
+  elem->hash_ = hash;
+
+  const successor_ptr bucket_last = buckets_[bucket_idx];
+  elem->successor_ = *bucket_last;
+  *bucket_last = elem;
+  for (auto i = buckets_ + bucket_idx, e = buckets_ + bucket_count_; i != e && *i == bucket_last; ++i)
+    *i = &elem->successor_;
+  ++size_;
+
+  return iterator(bucket_last);
+}
+
+inline auto basic_hashtable_algorithms::rehash_(successor_ptr* new_buckets, size_type new_bucket_count) noexcept -> std::tuple<successor_ptr*, size_type> {
+  std::fill_n(new_buckets, new_bucket_count, &head_);
+  element* pending = std::exchange(head_, nullptr);
+  auto old_buckets = std::make_tuple(std::exchange(buckets_, new_buckets), std::exchange(bucket_count_, new_bucket_count));
+
+  while (pending != nullptr) {
+    element*const elem = std::exchange(pending, pending->successor_);
+    const auto bucket_idx = bucket_for(elem);
+
+    successor_ptr bucket_last = buckets_[bucket_idx];
+    elem->successor_ = *bucket_last;
+    *bucket_last = elem;
+    for (auto i = buckets_ + bucket_idx, e = buckets_ + bucket_count_; i != e && *i == bucket_last; ++i)
+      *i = &elem->successor_;
+  }
+
+  return old_buckets;
+}
+
+inline auto basic_hashtable_algorithms::release_buckets_() noexcept -> std::tuple<successor_ptr*, size_type> {
+  return std::make_tuple(std::exchange(buckets_, nullptr), std::exchange(bucket_count_, 0));
+}
+
+inline auto basic_hashtable_algorithms::bucket_for(std::size_t hash) const noexcept -> size_type {
+  return bucket_count_ == 0u ? 0u : hash % bucket_count_;
+}
+
+inline auto basic_hashtable_algorithms::bucket_for(const element* e) const noexcept -> size_type {
+  return bucket_for(e->hash_);
+}
+
+inline auto basic_hashtable_algorithms::unlink_(successor_ptr pred_ptr) noexcept -> element* {
+  element*const unlinked_elem = *pred_ptr;
+  const auto bucket_idx = bucket_for(unlinked_elem);
+  *pred_ptr = std::exchange(unlinked_elem->successor_, nullptr);
+
+  for (auto i = buckets_ + bucket_idx, e = buckets_ + bucket_count_; i != e && *i == &unlinked_elem->successor_; ++i)
+    *i = pred_ptr;
+
+  --size_;
+  return unlinked_elem;
+}
+
+
+inline basic_hashtable_algorithms::iterator::iterator(element_ptr* s) noexcept
+: s_(s)
+{}
+
+inline auto basic_hashtable_algorithms::iterator::operator++() noexcept -> iterator& {
+  s_ = (*s_ == nullptr ? nullptr : &(*s_)->successor_);
+  return *this;
+}
+
+inline auto basic_hashtable_algorithms::iterator::operator++(int) noexcept -> iterator {
+  auto copy = *this;
+  ++*this;
+  return copy;
+}
+
+inline auto basic_hashtable_algorithms::iterator::operator*() const noexcept -> element& {
+  return *reinterpret_cast<element*>(reinterpret_cast<std::uintptr_t>(s_) - offsetof(element, successor_));
+}
+
+inline auto basic_hashtable_algorithms::iterator::operator->() const noexcept -> element* {
+  return reinterpret_cast<element*>(reinterpret_cast<std::uintptr_t>(s_) - offsetof(element, successor_));
+}
+
+inline auto basic_hashtable_algorithms::iterator::operator==(const iterator& y) const noexcept -> bool {
+  return s_ == y.s_;
+}
+
+inline auto basic_hashtable_algorithms::iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return !(*this == y);
+}
+
+inline auto basic_hashtable_algorithms::iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return s_ == y.s_;
+}
+
+inline auto basic_hashtable_algorithms::iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return !(*this == y);
+}
+
+
+inline basic_hashtable_algorithms::const_iterator::const_iterator(const iterator& y) noexcept
+: s_(y.s_)
+{}
+
+inline basic_hashtable_algorithms::const_iterator::const_iterator(const element_ptr* s) noexcept
+: s_(s)
+{}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator++() noexcept -> const_iterator& {
+  s_ = (*s_ == nullptr ? nullptr : &(*s_)->successor_);
+  return *this;
+}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator++(int) noexcept -> const_iterator {
+  auto copy = *this;
+  ++*this;
+  return copy;
+}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator*() const noexcept -> const element& {
+  return *reinterpret_cast<const element*>(reinterpret_cast<std::uintptr_t>(s_) - offsetof(element, successor_));
+}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator->() const noexcept -> const element* {
+  return reinterpret_cast<const element*>(reinterpret_cast<std::uintptr_t>(s_) - offsetof(element, successor_));
+}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator==(const iterator& y) const noexcept -> bool {
+  return s_ == y.s_;
+}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator!=(const iterator& y) const noexcept -> bool {
+  return !(*this == y);
+}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator==(const const_iterator& y) const noexcept -> bool {
+  return s_ == y.s_;
+}
+
+inline auto basic_hashtable_algorithms::const_iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+  return !(*this == y);
+}
+
+
+template<typename Allocator>
+inline basic_hashtable<Allocator>::basic_hashtable(typename basic_hashtable::allocator_type allocator)
+: basic_hashtable_allocator_member<typename std::allocator_traits<Allocator>::template rebind_alloc<basic_hashtable_algorithms::successor_ptr>>(std::move(allocator))
+{}
+
+template<typename Allocator>
+inline basic_hashtable<Allocator>::basic_hashtable(float max_load_factor, typename basic_hashtable::allocator_type allocator)
+: basic_hashtable_allocator_member<typename std::allocator_traits<Allocator>::template rebind_alloc<basic_hashtable_algorithms::successor_ptr>>(std::move(allocator)),
+  max_load_factor_(max_load_factor)
+{}
+
+template<typename Allocator>
+inline basic_hashtable<Allocator>::~basic_hashtable() noexcept {
+  using alloc_traits = std::allocator_traits<typename basic_hashtable::allocator_type>;
+
+  basic_hashtable_algorithms::successor_ptr* old_buckets = nullptr;
+  size_type old_bucket_count = 0;
+  std::tie(old_buckets, old_bucket_count) = this->release_buckets_();
+
+  if (old_buckets != nullptr)
+    alloc_traits::deallocate(this->alloc, old_buckets, old_bucket_count);
+}
+
+template<typename Allocator>
+inline auto basic_hashtable<Allocator>::max_bucket_count() const noexcept -> size_type {
+  using alloc_traits = std::allocator_traits<typename basic_hashtable::allocator_type>;
+
+  return alloc_traits::max_size(this->alloc);
+}
+
+template<typename Allocator>
+inline auto basic_hashtable<Allocator>::max_load_factor() const noexcept -> float {
+  return max_load_factor_;
+}
+
+template<typename Allocator>
+inline auto basic_hashtable<Allocator>::max_load_factor(float new_max_load_factor) -> void {
+  using alloc_traits = std::allocator_traits<typename basic_hashtable::allocator_type>;
+
+  basic_hashtable_algorithms::successor_ptr* old_buckets = nullptr;
+  size_type old_bucket_count = 0;
+
+  const auto new_size_flt = std::ceil(size() / new_max_load_factor);
+  if (std::isfinite(new_size_flt)) {
+    size_type new_size = static_cast<size_type>(new_size_flt);
+    if (new_size > max_bucket_count()) new_size = max_bucket_count();
+
+    if (new_size > bucket_count()) {
+      std::tie(old_buckets, old_bucket_count) = this->rehash_(
+          alloc_traits::allocate(this->alloc, new_size),
+          new_size);
+    }
+  }
+
+  max_load_factor_ = new_max_load_factor;
+  if (old_buckets != nullptr) alloc_traits::deallocate(this->alloc, old_buckets, old_bucket_count);
+}
+
+template<typename Allocator>
+inline auto basic_hashtable<Allocator>::link(std::size_t hash, element* elem, std::optional<function_ref<void()>> before_rehash) -> basic_hashtable_algorithms::iterator {
+  maybe_rehash_before_link_(std::move(before_rehash));
+  return link_(hash, elem);
+}
+
+template<typename Allocator>
+inline auto basic_hashtable<Allocator>::reserve(typename basic_hashtable_algorithms::size_type new_size, std::optional<function_ref<void()>> before_rehash) -> void {
+  // Note: I'm worried about rounding errors making this computation
+  // causing the required_bucket_count to be too low.
+  size_type required_bucket_count = std::min(
+      static_cast<size_type>(std::ceil(float(new_size) / max_load_factor())),
+      max_bucket_count());
+
+  if (before_rehash.has_value() && required_bucket_count > bucket_count()) {
+    std::invoke(std::move(*before_rehash));
+    // Redo the computation because the before-rehash function may have shrunk the hashtable size.
+    required_bucket_count = std::min(
+        static_cast<size_type>(std::ceil(float(new_size) / max_load_factor())),
+        max_bucket_count());
+  }
+  if (required_bucket_count > bucket_count()) rehash_(required_bucket_count);
+}
+
+template<typename Allocator>
+inline auto basic_hashtable<Allocator>::maybe_rehash_before_link_(std::optional<function_ref<void()>> before_rehash) -> void {
+  auto new_lf = float(size() + 1u) / float(bucket_count());
+  if (before_rehash.has_value() && new_lf > max_load_factor()) {
+    // Allow the before_rehash function to clean up the hashtable before making
+    // our final decision on rehashing.
+    std::invoke(std::move(*before_rehash));
+    new_lf = float(size() + 1u) / float(bucket_count()); // Update load-factor after maintenance.
+  }
+  if (bucket_count() == 0 || (new_lf > max_load_factor() && bucket_count() < max_bucket_count())) {
+    const auto new_size = bucket_count() == 0 ? initial_size : (bucket_count() > max_bucket_count() / 2u ? max_bucket_count() : 2u * bucket_count());
+    rehash_(new_size);
+  }
+}
+
+template<typename Allocator>
+inline auto basic_hashtable<Allocator>::rehash_(size_type new_bucket_count) -> void {
+  using alloc_traits = std::allocator_traits<typename basic_hashtable::allocator_type>;
+
+  basic_hashtable_algorithms::successor_ptr* old_buckets = nullptr;
+  basic_hashtable_algorithms::size_type old_bucket_count = 0;
+  std::tie(old_buckets, old_bucket_count) = this->basic_hashtable_algorithms::rehash_(
+      alloc_traits::allocate(this->alloc, new_bucket_count),
+      new_bucket_count);
+  alloc_traits::deallocate(this->alloc, old_buckets, old_bucket_count);
+}
+
+
+} /* namespace libhoard::detail */

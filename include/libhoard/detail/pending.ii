@@ -1,0 +1,79 @@
+#pragma once
+
+#include <utility>
+
+namespace libhoard::detail {
+
+
+template<typename T, typename Allocator, typename ErrorType>
+inline pending<T, Allocator, ErrorType>::pending(allocator_type alloc)
+: cbq_(std::move(alloc)),
+  expired_(false),
+  weakened_(false)
+{}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::add_callback(callback_fn cb) -> void {
+  cbq_.push_back(std::move(cb));
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::resolve_success(const value_type& v) noexcept -> void {
+  if (!cbq_.empty())
+#if __has_cpp_attribute(likely)
+    [[likely]]
+#endif
+  {
+    const error_type ex;
+    for (auto& q : cbq_) std::invoke(q, v, ex);
+    cbq_.clear();
+  }
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::resolve_failure(const error_type& ex) noexcept -> void {
+  if (!cbq_.empty())
+#if __has_cpp_attribute(likely)
+    [[likely]]
+#endif
+  {
+    const value_type v;
+    for (auto& q : cbq_) std::invoke(q, v, ex);
+    cbq_.clear();
+  }
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::expired() const noexcept -> bool {
+  return expired_;
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::weakened() const noexcept -> bool {
+  return weakened_;
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::weaken() noexcept -> void {
+  weakened_ = true;
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::strengthen() noexcept -> bool {
+  if (expired_) return false;
+  weakened_ = false;
+  return true;
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::cancel() noexcept -> void {
+  cbq_.clear();
+}
+
+template<typename T, typename Allocator, typename ErrorType>
+inline auto pending<T, Allocator, ErrorType>::mark_expired() noexcept -> void {
+  expired_ = true;
+}
+
+
+} /* namespace libhoard::detail */

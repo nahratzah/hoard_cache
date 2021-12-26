@@ -1,0 +1,129 @@
+#pragma once
+
+#include <algorithm>
+#include <iterator>
+
+#include "../policies.h"
+
+namespace libhoard::detail {
+
+
+inline auto basic_queue::on_create_(value_base* v, callback* strengthen) noexcept -> void {
+  v->hot_ = false;
+  if (odd_sized_) { // Going from 2n+1 to 2n+2 elements.
+    midpoint_->hot_ = true;
+    std::invoke(strengthen, &*midpoint_);
+    midpoint_ = q_.link_after(midpoint_, v);
+    odd_sized_ = false;
+  } else { // Going from 2n to 2n+1 elements.
+    midpoint_ = q_.link_before(midpoint_, v);
+    odd_sized_ = true;
+  }
+}
+
+inline auto basic_queue::on_hit_(value_base* v, callback* strengthen) noexcept -> void {
+  if (midpoint_.get() == v)
+    midpoint_ = q_.unlink(q_.iterator_to(v));
+  else
+    q_.unlink(q_.iterator_to(v));
+  q_.link_front(v);
+
+  if (!v->hot_) {
+    v->hot_ = true;
+    (--midpoint_)->hot_ = false; // If the cache only has 1 element, this would make v cold again. :)
+  }
+
+  std::invoke(strengthen, v);
+}
+
+inline auto basic_queue::on_unlink_(value_base* v) noexcept -> void {
+  if (midpoint_.get() == v)
+    midpoint_ = q_.unlink(q_.iterator_to(v));
+  else
+    q_.unlink(q_.iterator_to(v));
+
+  if (v->hot_) {
+    if (odd_sized_) { // Going from 2n+1 to 2n elements.
+      (midpoint_++)->hot_ = true;
+    } else { // Going from 2n+2 to 2n elements.
+      // SKIP
+    }
+  } else { // cold element
+    if (odd_sized_) { // Going from 2n+1 to 2n elements.
+      // SKIP
+    } else { // Going from 2n+2 to 2n+1 elements.
+      (--midpoint_)->hot_ = false;
+    }
+  }
+
+  odd_sized_ = !odd_sized_;
+}
+
+inline auto basic_queue::invariant() const noexcept -> bool {
+  const auto hot_count = std::distance<linked_list<value_base>::const_iterator>(q_.begin(), midpoint_);
+  const auto cold_count = std::distance<linked_list<value_base>::const_iterator>(midpoint_, q_.end());
+  const auto count = hot_count + cold_count;
+
+  // Everything preceding midpoint is hot.
+  const bool invariant_1 = std::all_of(q_.begin(), linked_list<value_base>::const_iterator(midpoint_),
+      [](const value_base& v) noexcept -> bool {
+        return v.hot_;
+      });
+  // Everything from midpoint onward is cold.
+  const bool invariant_2 = std::none_of(linked_list<value_base>::const_iterator(midpoint_), q_.end(),
+      [](const value_base& v) noexcept -> bool {
+        return v.hot_;
+      });
+  // `odd_sized_` is true iff size of the list is odd.
+  const bool invariant_3 = (count % 2 == 1) == odd_sized_;
+  // Number of hot elements is rounded down half of total count.
+  const bool invariant_4 = (hot_count == count / 2);
+
+  return invariant_1 && invariant_2 && invariant_3 && invariant_4;
+}
+
+
+template<typename HashTable>
+template<typename... Args, typename Alloc>
+inline queue<HashTable>::queue([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] Alloc&& alloc) noexcept
+{}
+
+template<typename HashTable>
+inline queue<HashTable>::~queue() noexcept = default;
+
+template<typename HashTable>
+inline auto queue<HashTable>::lru_expire_(std::size_t count) noexcept -> void {
+  auto iter = q_.end();
+  while (iter != q_.begin() && count > 0) {
+    --iter;
+
+    // We only expire elements that are cold. Once we encounter a hot element,
+    // all further elements are hot too, so we can abort the loop.
+    if (iter->hot_) break;
+
+    if constexpr(HashTable::policy_type_list::template has_type_v<weaken_policy>)
+      static_cast<typename HashTable::value_type&>(*iter).weaken();
+    else
+      static_cast<typename HashTable::value_type&>(*iter).mark_expired();
+    --count;
+  }
+}
+
+template<typename HashTable>
+inline auto queue<HashTable>::on_create_(value_base* v) noexcept -> void {
+  this->basic_queue::on_create_(v,
+      [](value_base* v) noexcept {
+        static_cast<typename HashTable::value_type*>(v)->strengthen();
+      });
+}
+
+template<typename HashTable>
+inline auto queue<HashTable>::on_hit_(value_base* v) noexcept -> void {
+  this->basic_queue::on_hit_(v,
+      [](value_base* v) noexcept {
+        static_cast<typename HashTable::value_type*>(v)->strengthen();
+      });
+}
+
+
+} /* namespace libhoard::detail */

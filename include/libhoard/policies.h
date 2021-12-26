@@ -4,6 +4,8 @@
 #include <tuple>
 
 #include "detail/meta.h"
+#include "equal.h"
+#include "hash.h"
 
 namespace libhoard::detail {
 struct queue_policy; // Forward declaration, implemented in "detail/queue.h"

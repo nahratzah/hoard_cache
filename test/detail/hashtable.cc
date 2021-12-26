@@ -46,10 +46,7 @@ SUITE(hashtable) {
     CHECK_EQUAL(1u, hashtable->size());
     CHECK_EQUAL(
         std::string("value"),
-        std::get<1>(
-            hashtable->get_if_exists(
-                std::hash<std::string>()("key"),
-                std::bind(std::equal_to<std::string>(), "key", std::placeholders::_1))));
+        std::get<1>(hashtable->get_if_exists("key")));
   }
 
   TEST_FIXTURE(hashtable_fixture, emplace_value_using_tuples) {
@@ -65,10 +62,7 @@ SUITE(hashtable) {
     CHECK_EQUAL(1u, hashtable->size());
     CHECK_EQUAL(
         std::string("value"),
-        std::get<1>(
-            hashtable->get_if_exists(
-                std::hash<std::string>()("key"),
-                std::bind(std::equal_to<std::string>(), "key", std::placeholders::_1))));
+        std::get<1>(hashtable->get_if_exists("key")));
   }
 
   TEST_FIXTURE(hashtable_fixture, emplace_value_expires_others_with_same_key) {
@@ -86,10 +80,7 @@ SUITE(hashtable) {
     CHECK(!hashtable->empty());
     CHECK_EQUAL(
         std::string("value 2"),
-        std::get<1>(
-            hashtable->get_if_exists(
-                std::hash<std::string>()("key"),
-                std::bind(std::equal_to<std::string>(), "key", std::placeholders::_1))));
+        std::get<1>(hashtable->get_if_exists("key")));
   }
 
   TEST_FIXTURE(hashtable_fixture, emplace_value_using_tuples_expires_others_with_same_key) {
@@ -109,16 +100,13 @@ SUITE(hashtable) {
     CHECK(!hashtable->empty());
     CHECK_EQUAL(
         std::string("value 2"),
-        std::get<1>(
-            hashtable->get_if_exists(
-                std::hash<std::string>()("key"),
-                std::bind(std::equal_to<std::string>(), "key", std::placeholders::_1))));
+        std::get<1>(hashtable->get_if_exists("key")));
   }
 
   TEST_FIXTURE(hashtable_fixture, get_if_present_on_empty_table) {
     init_test(std::tuple<>());
 
-    auto get_result = hashtable->get_if_exists(std::hash<std::string>()("key"), std::bind(std::equal_to<std::string>(), "key", std::placeholders::_1));
+    auto get_result = hashtable->get_if_exists("key");
     CHECK_EQUAL(0, get_result.index());
   }
 
@@ -137,13 +125,13 @@ SUITE(hashtable) {
         std::equal_to<std::string>(),
         std::string("key_3"), std::string("value_3"));
 
-    auto get_result_1 = hashtable->get_if_exists(std::hash<std::string>()("key_1"), std::bind(std::equal_to<std::string>(), "key_1", std::placeholders::_1));
+    auto get_result_1 = hashtable->get_if_exists("key_1");
     CHECK_EQUAL(std::string("value_1"), std::get<1>(get_result_1));
 
-    auto get_result_2 = hashtable->get_if_exists(std::hash<std::string>()("key_2"), std::bind(std::equal_to<std::string>(), "key_2", std::placeholders::_1));
+    auto get_result_2 = hashtable->get_if_exists("key_2");
     CHECK_EQUAL(std::string("value_2"), std::get<1>(get_result_2));
 
-    auto get_result_3 = hashtable->get_if_exists(std::hash<std::string>()("key_3"), std::bind(std::equal_to<std::string>(), "key_3", std::placeholders::_1));
+    auto get_result_3 = hashtable->get_if_exists("key_3");
     CHECK_EQUAL(std::string("value_3"), std::get<1>(get_result_3));
   }
 
@@ -164,14 +152,14 @@ SUITE(hashtable) {
 
     hashtable->expire(std::hash<std::string>()("key_3"), std::bind(std::equal_to<std::string>(), "key_3", std::placeholders::_1));
 
-    auto get_result = hashtable->get_if_exists(std::hash<std::string>()("key_3"), std::bind(std::equal_to<std::string>(), "key_3", std::placeholders::_1));
+    auto get_result = hashtable->get_if_exists("key_3");
     CHECK(get_result.index() == 0);
 
     // Other keys are not expired.
-    auto get_result_1 = hashtable->get_if_exists(std::hash<std::string>()("key_1"), std::bind(std::equal_to<std::string>(), "key_1", std::placeholders::_1));
+    auto get_result_1 = hashtable->get_if_exists("key_1");
     CHECK_EQUAL(std::string("value_1"), std::get<1>(get_result_1));
 
-    auto get_result_2 = hashtable->get_if_exists(std::hash<std::string>()("key_2"), std::bind(std::equal_to<std::string>(), "key_2", std::placeholders::_1));
+    auto get_result_2 = hashtable->get_if_exists("key_2");
     CHECK_EQUAL(std::string("value_2"), std::get<1>(get_result_2));
   }
 }

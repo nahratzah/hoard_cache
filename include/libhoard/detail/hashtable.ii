@@ -272,7 +272,7 @@ inline auto hashtable<KeyType, Mapper, Policies...>::reserve(size_type sz) -> vo
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
-inline auto hashtable<KeyType, Mapper, Policies...>::get_if_exists(std::size_t hash, function_ref<bool(const key_type&)> matcher) const noexcept(noexcept(std::declval<const value_type&>().get_if_matching(std::declval<function_ref<bool(const key_type&)>>(), std::false_type()))) -> std::variant<std::monostate, mapped_type, error_type> {
+inline auto hashtable<KeyType, Mapper, Policies...>::get_if_exists_(std::size_t hash, function_ref<bool(const key_type&)> matcher) const -> std::variant<std::monostate, mapped_type, error_type> {
   for (const auto& elem : bucket_for_hash_(hash)) {
     if (elem.hash() != hash) continue;
     auto result = elem.get_if_matching(matcher, std::false_type());
@@ -280,6 +280,22 @@ inline auto hashtable<KeyType, Mapper, Policies...>::get_if_exists(std::size_t h
       return result;
   }
   return {};
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename... Keys>
+inline auto hashtable<KeyType, Mapper, Policies...>::get_if_exists(const Keys&... keys) const noexcept(
+    noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().equal, std::declval<const key_type&>(), std::declval<const Keys&>()...))
+    &&
+    noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().hash, std::declval<const Keys&>()...))
+    &&
+    std::is_nothrow_copy_constructible_v<mapped_type> && std::is_nothrow_copy_constructible_v<error_type>)
+-> std::variant<std::monostate, mapped_type, error_type> {
+  return get_if_exists_(
+      this->hash(keys...),
+      [&](const key_type& ht_key) -> bool {
+        return this->equal(ht_key, keys...);
+      });
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>

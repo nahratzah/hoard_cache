@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <memory>
-#include <type_traits>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -13,12 +14,36 @@
 #include "meta.h"
 #include "refcount.h"
 #include "value_type.h"
+#include "../equal.h"
+#include "../hash.h"
 
 namespace libhoard::detail {
 
 
 template<typename KeyType, typename Mapper, typename... Policies>
 class hashtable;
+
+
+template<typename>
+struct has_equal
+: public std::false_type
+{};
+
+template<typename Equal>
+struct has_equal<equal<Equal>>
+: public std::true_type
+{};
+
+
+template<typename>
+struct has_hash
+: public std::false_type
+{};
+
+template<typename Hash>
+struct has_hash<hash<Hash>>
+: public std::true_type
+{};
 
 
 template<typename Policy> struct dependent_policies_; // Forward declaration.
@@ -144,12 +169,26 @@ class hashtable_policy_container
 
 template<typename KeyType, typename Mapper, typename... Policies>
 struct hashtable_helper_ {
+  static inline constexpr bool is_identity_map = std::is_same_v<identity_t, KeyType>;
+  static inline constexpr bool has_equal_policy = std::disjunction_v<has_equal<Policies>...>;
+  static inline constexpr bool has_hash_policy = std::disjunction_v<has_hash<Policies>...>;
+
+  using maybe_default_equal = std::conditional_t<
+      has_equal_policy,
+      type_list<>,
+      type_list<equal<std::equal_to<std::conditional_t<is_identity_map, typename Mapper::mapped_type, KeyType>>>>>;
+
+  using maybe_default_hash = std::conditional_t<
+      has_hash_policy,
+      type_list<>,
+      type_list<hash<std::hash<std::conditional_t<is_identity_map, typename Mapper::mapped_type, KeyType>>>>>;
+
   ///\brief Figure out what dependency policies to pull in.
   ///\details
   ///Takes the dependencies type_list from the \p Policies.
   ///Ensures its set is distinct and none of the Policies are included.
   using policy_dependencies = typename type_list<>::extend_t<typename dependent_policies_<Policies>::type...>::template exclude_t<type_list<Policies...>>::distinct_t;
-  using all_policies = typename type_list<>::extend_t<policy_dependencies, type_list<Policies...>>;
+  using all_policies = typename type_list<>::extend_t<maybe_default_equal, maybe_default_hash, policy_dependencies, type_list<Policies...>>;
 
   ///\brief List of types that the value type must inherit from according to policies.
   using vt_base_types = typename all_policies::template transform_t<figure_out_hashtable_value_base_>::template remove_all_t<void>;
@@ -339,17 +378,39 @@ class hashtable
 
   auto reserve(size_type sz) -> void;
 
+  private:
   /**
    * \brief Retrieve a value from the cache.
    * \details
    * A value is retrieved if it has been fully resolved (no pending values), and it has not expired.
    *
-   * This function does not perform on-hit events.
+   * This function does not perform on-hit/on-miss events.
    *
    * \return Variant holding the monostate if no value was found, or one of the mapped type or error type, if a value is present.
    */
-  auto get_if_exists(std::size_t hash, function_ref<bool(const key_type&)> matcher) const noexcept(noexcept(std::declval<const value_type&>().get_if_matching(std::declval<function_ref<bool(const key_type&)>>(), std::false_type()))) -> std::variant<std::monostate, mapped_type, error_type>;
+  auto get_if_exists_(std::size_t hash, function_ref<bool(const key_type&)> matcher) const -> std::variant<std::monostate, mapped_type, error_type>;
 
+  public:
+  /**
+   * \brief Retrieve a value from the cache.
+   * \details
+   * A value is retrieved if it has been fully resolved (no pending value), and it has not expired.
+   *
+   * This function does not perform on-hit/on-miss events.
+   *
+   * \param keys Key lookup arguments. These are passed to the hash and equal functions.
+   * \return Variant holding the monostate if no value was found, or one of the mapped type or error type, if a value is present.
+   */
+  template<typename... Keys>
+  auto get_if_exists(const Keys&... keys) const noexcept(
+      noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().equal, std::declval<const key_type&>(), std::declval<const Keys&>()...))
+      &&
+      noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().hash, std::declval<const Keys&>()...))
+      &&
+      std::is_nothrow_copy_constructible_v<mapped_type> && std::is_nothrow_copy_constructible_v<error_type>)
+  -> std::variant<std::monostate, mapped_type, error_type>;
+
+  private:
   /**
    * \brief Retrieve a value from the cache.
    * \details
@@ -365,6 +426,7 @@ class hashtable
       std::variant<std::monostate, mapped_type, error_type, pending_type*>,
       std::variant<std::monostate, mapped_type, error_type>>;
 
+  public:
   ///\brief Expire all elements in the cache.
   auto expire_all() noexcept -> void;
 

@@ -83,16 +83,16 @@ SUITE(cache) {
   TEST_FIXTURE(fixture, emplace_replaces) {
     cache.emplace(1, "bla bla chocoladevla");
 
-    auto seventeen = cache.get(1);
-    CHECK(seventeen.has_value());
-    CHECK_EQUAL(std::string("bla bla chocoladevla"), *seventeen);
+    auto one = cache.get(1);
+    CHECK(one.has_value());
+    CHECK_EQUAL(std::string("bla bla chocoladevla"), *one);
   }
 
   TEST_FIXTURE(fixture, piecewise_emplace_replaces) {
     cache.emplace(std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple("bla bla chocoladevla"));
 
-    auto seventeen = cache.get(1);
-    CHECK(seventeen.has_value());
-    CHECK_EQUAL(std::string("bla bla chocoladevla"), *seventeen);
+    auto one = cache.get(1);
+    CHECK(one.has_value());
+    CHECK_EQUAL(std::string("bla bla chocoladevla"), *one);
   }
 }

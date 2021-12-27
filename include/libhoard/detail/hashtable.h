@@ -257,6 +257,7 @@ class hashtable_helper_<KeyType, Mapper, Policies...>::iterator {
   auto operator++() noexcept -> iterator&;
   auto operator++(int) noexcept -> iterator;
 
+  auto get() const noexcept -> value_type*;
   auto operator*() const noexcept -> value_type&;
   auto operator->() const noexcept -> value_type*;
 
@@ -289,6 +290,7 @@ class hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator {
   auto operator++() noexcept -> const_iterator&;
   auto operator++(int) noexcept -> const_iterator;
 
+  auto get() const noexcept -> const value_type*;
   auto operator*() const noexcept -> const value_type&;
   auto operator->() const noexcept -> const value_type*;
 
@@ -434,11 +436,13 @@ class hashtable
    * \details
    * Retrieved value shall not be expired, but it may be pending.
    *
+   * Invokes the `on hit` and `on miss` events.
+   *
    * \return Variant holding the monostate if no value was found, or one of the mapped type or error type, if a value is present.
    * If no value is present, but the lookup is pending, a pointer to the mapper will be returned.
    */
   template<bool IncludePending>
-  auto get_(std::size_t hash, function_ref<const key_type&> matcher, std::integral_constant<bool, IncludePending> include_pending)
+  auto get_(std::size_t hash, function_ref<bool(const key_type&)> matcher, std::integral_constant<bool, IncludePending> include_pending)
   -> std::conditional_t<
       IncludePending,
       std::variant<std::monostate, mapped_type, error_type, pending_type*>,
@@ -500,6 +504,21 @@ class hashtable
   template<typename KeyArg, typename MappedArg>
   auto emplace(KeyArg&& key_arg, MappedArg&& mapped_arg)
   -> std::enable_if_t<std::is_constructible_v<key_type, KeyArg> && std::is_constructible_v<mapped_type, MappedArg>>;
+
+  template<typename... KeyArgs, typename... MappedArgs, bool IncludePending>
+  auto get_or_emplace(std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args, std::integral_constant<bool, IncludePending> include_pending)
+  -> std::conditional_t<
+      IncludePending,
+      std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+      std::variant<std::monostate, mapped_type, error_type>>;
+
+  template<typename KeyArg, typename MappedArg, bool IncludePending>
+  auto get_or_emplace(KeyArg&& key_arg, MappedArg&& mapped_arg, std::integral_constant<bool, IncludePending> include_pending)
+  -> std::enable_if_t<std::is_constructible_v<key_type, KeyArg> && std::is_constructible_v<mapped_type, MappedArg>,
+      std::conditional_t<
+          IncludePending,
+          std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+          std::variant<std::monostate, mapped_type, error_type>>>;
 
   ///\brief Count number of not-expired elements in the cache.
   auto count() const noexcept -> size_type;

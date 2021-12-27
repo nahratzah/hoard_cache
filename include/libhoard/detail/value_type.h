@@ -57,13 +57,16 @@ class value_type
   value_type(const value_type&) = delete;
   value_type(value_type&&) = delete;
 
+  auto get_if_matching(function_ref<bool(const key_type&)> matcher, std::false_type include_pending) const -> std::variant<std::monostate, mapped_type, error_type>;
+  auto get_if_matching(function_ref<bool(const key_type&)> matcher, std::true_type include_pending) -> std::variant<std::monostate, mapped_type, error_type, pending_type*>;
+  auto matches(function_ref<bool(const key_type&)> matcher) const -> bool;
+
   template<bool IncludePending>
-  auto get_if_matching(function_ref<bool(const key_type&)> matcher, std::integral_constant<bool, IncludePending> include_pending) const
+  auto get(std::integral_constant<bool, IncludePending> include_pending) const
   -> std::conditional_t<
       IncludePending,
       std::variant<std::monostate, mapped_type, error_type, pending_type*>,
       std::variant<std::monostate, mapped_type, error_type>>;
-  auto matches(function_ref<bool(const key_type&)> matcher) const -> bool;
 
   auto pending() const noexcept -> bool;
   auto expired() const noexcept -> bool;
@@ -108,9 +111,9 @@ class value_type<identity_t, Mapper, BaseTypes...>
   value_type(const value_type&) = delete;
   value_type(value_type&&) = delete;
 
-  auto get_if_matching(function_ref<bool(const key_type&)> matcher, std::false_type include_pending) const
-  -> std::variant<std::monostate, mapped_type, error_type>;
+  auto get_if_matching(function_ref<bool(const key_type&)> matcher, std::false_type include_pending) const -> std::variant<std::monostate, mapped_type, error_type>;
   auto matches(function_ref<bool(const key_type&)> matcher) const -> bool;
+  auto get(std::false_type include_pending) const -> std::variant<std::monostate, mapped_type, error_type>;
 
   auto pending() const noexcept -> bool;
   auto expired() const noexcept -> bool;

@@ -107,6 +107,11 @@ inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator+
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::get() const noexcept -> value_type* {
+  return static_cast<value_type*>(iter_.operator->());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
 inline auto hashtable_helper_<KeyType, Mapper, Policies...>::iterator::operator*() const noexcept -> value_type& {
   return static_cast<value_type&>(iter_.operator*());
 }
@@ -159,6 +164,11 @@ inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::ope
 template<typename KeyType, typename Mapper, typename... Policies>
 inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::operator++(int) noexcept -> const_iterator {
   return const_iterator(iter_++);
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+inline auto hashtable_helper_<KeyType, Mapper, Policies...>::const_iterator::get() const noexcept -> const value_type* {
+  return static_cast<const value_type*>(iter_.operator->());
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
@@ -300,7 +310,7 @@ inline auto hashtable<KeyType, Mapper, Policies...>::get_if_exists(const Keys&..
 
 template<typename KeyType, typename Mapper, typename... Policies>
 template<bool IncludePending>
-inline auto hashtable<KeyType, Mapper, Policies...>::get_(std::size_t hash, function_ref<const key_type&> matcher, std::integral_constant<bool, IncludePending> include_pending)
+inline auto hashtable<KeyType, Mapper, Policies...>::get_(std::size_t hash, function_ref<bool(const key_type&)> matcher, std::integral_constant<bool, IncludePending> include_pending)
 -> std::conditional_t<
     IncludePending,
     std::variant<std::monostate, mapped_type, error_type, pending_type*>,
@@ -318,7 +328,7 @@ inline auto hashtable<KeyType, Mapper, Policies...>::get_(std::size_t hash, func
     if (iter->hash() != hash) { // If hashcode mismatches, we only need to maybe clean up if it's expired.
       if (iter->expired() && !iter->pending()) {
         if (iter == before_e) before_e = before_i;
-        this->unlink_and_dispose(before_i, disposer_());
+        this->unlink_and_dispose(before_i.iter_, disposer_());
         continue;
       }
     } else {
@@ -336,18 +346,22 @@ inline auto hashtable<KeyType, Mapper, Policies...>::get_(std::size_t hash, func
         } else {
           // Cleanup expired element.
           if (iter == before_e) before_e = before_i;
-          this->unlink_and_dispose(before_i, disposer_());
+          this->unlink_and_dispose(before_i.iter_, disposer_());
         }
         continue;
       }
 
       // Return value if it was found.
-      if (val.index() != 0) return val;
+      if (val.index() != 0) {
+        this->on_hit_(iter.get());
+        return val;
+      }
     }
 
     // No match and no expiry. Advance to next element.
     before_i = iter;
   }
+  this->on_miss_();
   return {};
 }
 
@@ -508,6 +522,101 @@ inline auto hashtable<KeyType, Mapper, Policies...>::emplace(KeyArg&& key_arg, M
   link(hash, allocate_value_type(std::piecewise_construct, std::forward_as_tuple(std::forward<KeyArg>(key_arg)), std::forward_as_tuple(std::forward<MappedArg>(mapped_arg))));
 
   maintenance_();
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename... KeyArgs, typename... MappedArgs, bool IncludePending>
+inline auto hashtable<KeyType, Mapper, Policies...>::get_or_emplace(std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args, std::integral_constant<bool, IncludePending> include_pending)
+-> std::conditional_t<
+    IncludePending,
+    std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+    std::variant<std::monostate, mapped_type, error_type>> {
+  using result_type = std::conditional_t<
+      IncludePending,
+      std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+      std::variant<std::monostate, mapped_type, error_type>>;
+
+  const auto hash = std::apply(this->hash, key_args);
+  auto get_result = get_(
+      hash,
+      [this, &key_args](const key_type& ht_key) -> bool {
+        return std::apply(
+            [this, &ht_key](const auto&... keys) {
+              return std::invoke(this->equal, ht_key, keys...);
+            },
+            key_args);
+      },
+      std::true_type());
+
+  // If we found a value, return it.
+  if (get_result.index() != 0) {
+    maintenance_();
+    if constexpr(include_pending()) {
+      return get_result;
+    } else {
+      switch (get_result.index()) {
+        default:
+          return result_type(std::in_place_index<0>);
+        case 1:
+          return result_type(std::in_place_index<1>, std::get<1>(std::move(get_result)));
+        case 2:
+          return result_type(std::in_place_index<2>, std::get<2>(std::move(get_result)));
+      }
+    }
+  }
+
+  // Create a new value.
+  auto new_value = allocate_value_type(pc, std::move(key_args), std::move(mapped_args));
+  auto result = new_value->get(include_pending);
+  link(hash, new_value);
+  maintenance_();
+  return result;
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename KeyArg, typename MappedArg, bool IncludePending>
+inline auto hashtable<KeyType, Mapper, Policies...>::get_or_emplace(KeyArg&& key_arg, MappedArg&& mapped_arg, std::integral_constant<bool, IncludePending> include_pending)
+-> std::enable_if_t<std::is_constructible_v<key_type, KeyArg> && std::is_constructible_v<mapped_type, MappedArg>,
+    std::conditional_t<
+        IncludePending,
+        std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+        std::variant<std::monostate, mapped_type, error_type>>> {
+  using result_type = std::conditional_t<
+      IncludePending,
+      std::variant<std::monostate, mapped_type, error_type, pending_type*>,
+      std::variant<std::monostate, mapped_type, error_type>>;
+
+  const auto hash = std::invoke(this->hash, key_arg);
+  auto get_result = get_(
+      hash,
+      [this, &key_arg](const key_type& ht_key) -> bool {
+        return std::invoke(this->equal, ht_key, key_arg);
+      },
+      std::true_type());
+
+  // If we found a value, return it.
+  if (get_result.index() != 0) {
+    maintenance_();
+    if constexpr(include_pending()) {
+      return get_result;
+    } else {
+      switch (get_result.index()) {
+        default:
+          return result_type(std::in_place_index<0>);
+        case 1:
+          return result_type(std::in_place_index<1>, std::get<1>(std::move(get_result)));
+        case 2:
+          return result_type(std::in_place_index<2>, std::get<2>(std::move(get_result)));
+      }
+    }
+  }
+
+  // Create a new value.
+  auto new_value = allocate_value_type(std::piecewise_construct, std::forward_as_tuple(std::forward<KeyArg>(key_arg)), std::forward_as_tuple(std::forward<MappedArg>(mapped_arg)));
+  auto result = new_value->get(include_pending);
+  link(hash, new_value);
+  maintenance_();
+  return result;
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>

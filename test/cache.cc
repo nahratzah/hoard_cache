@@ -95,4 +95,40 @@ SUITE(cache) {
     CHECK(one.has_value());
     CHECK_EQUAL(std::string("bla bla chocoladevla"), *one);
   }
+
+  TEST_FIXTURE(fixture, get_or_emplace_on_existing_element) {
+    auto result = cache.get_or_emplace(1, "bla bla bla chocoladevla");
+    CHECK_EQUAL("one", result); // Returned existing value.
+
+    auto one = cache.get(1);
+    CHECK(one.has_value());
+    CHECK_EQUAL(std::string("one"), *one); // No replacement happened.
+  }
+
+  TEST_FIXTURE(fixture, piecewise_get_or_emplace_on_existing_element) {
+    auto result = cache.get_or_emplace(std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple("bla bla bla chocoladevla"));
+    CHECK_EQUAL("one", result); // Returned existing value.
+
+    auto one = cache.get(1);
+    CHECK(one.has_value());
+    CHECK_EQUAL(std::string("one"), *one); // No replacement happened.
+  }
+
+  TEST_FIXTURE(fixture, get_or_emplace_on_miss) {
+    auto result = cache.get_or_emplace(17, "bla bla bla chocoladevla");
+    CHECK_EQUAL("bla bla bla chocoladevla", result); // Returned existing value.
+
+    auto seventeen = cache.get(17);
+    CHECK(seventeen.has_value());
+    CHECK_EQUAL(std::string("bla bla bla chocoladevla"), *seventeen); // No replacement happened.
+  }
+
+  TEST_FIXTURE(fixture, piecewise_get_or_emplace_on_miss) {
+    auto result = cache.get_or_emplace(std::piecewise_construct, std::forward_as_tuple(17), std::forward_as_tuple("bla bla bla chocoladevla"));
+    CHECK_EQUAL("bla bla bla chocoladevla", result); // Returned existing value.
+
+    auto seventeen = cache.get(17);
+    CHECK(seventeen.has_value());
+    CHECK_EQUAL(std::string("bla bla bla chocoladevla"), *seventeen); // No replacement happened.
+  }
 }

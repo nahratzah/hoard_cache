@@ -81,6 +81,20 @@ class cache {
     impl_->emplace(std::forward<KeyArg>(key), std::forward<MappedArg>(mapped));
   }
 
+  template<typename... Keys, typename... MappedArgs>
+  auto get_or_emplace(std::piecewise_construct_t pc, std::tuple<Keys...> keys, std::tuple<MappedArgs...> mapped) -> T {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
+    return std::get<1>(impl_->get_or_emplace(std::move(pc), std::move(keys), std::move(mapped), std::false_type()));
+  }
+
+  template<typename KeyArg, typename MappedArg>
+  auto get_or_emplace(KeyArg&& key, MappedArg&& mapped) -> T {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
+    return std::get<1>(impl_->get_or_emplace(std::forward<KeyArg>(key), std::forward<MappedArg>(mapped), std::false_type()));
+  }
+
   private:
   std::shared_ptr<hashtable_type> impl_;
 };

@@ -37,10 +37,7 @@ SUITE(hashtable) {
   TEST_FIXTURE(hashtable_fixture, emplace_value) {
     init_test(std::tuple<>());
 
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key"), std::string("value"));
+    hashtable->emplace(std::string("key"), std::string("value"));
 
     CHECK(!hashtable->empty());
     CHECK_EQUAL(1u, hashtable->size());
@@ -53,8 +50,6 @@ SUITE(hashtable) {
     init_test(std::tuple<>());
 
     hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
         std::piecewise_construct,
         std::forward_as_tuple(std::string("key")), std::forward_as_tuple("value"));
 
@@ -68,14 +63,8 @@ SUITE(hashtable) {
   TEST_FIXTURE(hashtable_fixture, emplace_value_expires_others_with_same_key) {
     init_test(std::tuple<>());
 
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key"), std::string("value 1"));
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key"), std::string("value 2"));
+    hashtable->emplace(std::string("key"), std::string("value 1"));
+    hashtable->emplace(std::string("key"), std::string("value 2"));
 
     CHECK(!hashtable->empty());
     CHECK_EQUAL(
@@ -87,13 +76,9 @@ SUITE(hashtable) {
     init_test(std::tuple<>());
 
     hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
         std::piecewise_construct,
         std::forward_as_tuple(std::string("key")), std::forward_as_tuple("value 1"));
     hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
         std::piecewise_construct,
         std::forward_as_tuple(std::string("key")), std::forward_as_tuple("value 2"));
 
@@ -112,18 +97,9 @@ SUITE(hashtable) {
 
   TEST_FIXTURE(hashtable_fixture, get_if_present_finds_a_value) {
     init_test(std::tuple<>());
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key_1"), std::string("value_1"));
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key_2"), std::string("value_2"));
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key_3"), std::string("value_3"));
+    hashtable->emplace(std::string("key_1"), std::string("value_1"));
+    hashtable->emplace(std::string("key_2"), std::string("value_2"));
+    hashtable->emplace(std::string("key_3"), std::string("value_3"));
 
     auto get_result_1 = hashtable->get_if_exists("key_1");
     CHECK_EQUAL(std::string("value_1"), std::get<1>(get_result_1));
@@ -137,20 +113,11 @@ SUITE(hashtable) {
 
   TEST_FIXTURE(hashtable_fixture, expire) {
     init_test(std::tuple<>());
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key_1"), std::string("value_1"));
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key_2"), std::string("value_2"));
-    hashtable->emplace(
-        std::hash<std::string>(),
-        std::equal_to<std::string>(),
-        std::string("key_3"), std::string("value_3"));
+    hashtable->emplace(std::string("key_1"), std::string("value_1"));
+    hashtable->emplace(std::string("key_2"), std::string("value_2"));
+    hashtable->emplace(std::string("key_3"), std::string("value_3"));
 
-    hashtable->expire(std::hash<std::string>()("key_3"), std::bind(std::equal_to<std::string>(), "key_3", std::placeholders::_1));
+    hashtable->expire(std::string("key_3"));
 
     auto get_result = hashtable->get_if_exists("key_3");
     CHECK(get_result.index() == 0);

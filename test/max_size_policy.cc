@@ -19,11 +19,11 @@ SUITE(max_size_policy) {
 
     auto table = std::make_shared<hashtable_type>(std::make_tuple(max_size_policy::max_size(maxsize)));
     for (unsigned int i = 0; i < maxsize; ++i)
-      table->emplace(std::hash<int>(), std::equal_to<int>(), i, "bla");
+      table->emplace(i, "bla");
     CHECK_EQUAL(maxsize, table->count()); // First `maxsize` elements don't cause anything to expire.
 
     for (unsigned int i = maxsize; i < maxsize * 2u; ++i) {
-      table->emplace(std::hash<int>(), std::equal_to<int>(), i, "bla");
+      table->emplace(i, "bla");
       CHECK_EQUAL(maxsize, table->count()); // Policy keeps cache size at desired `maxsize` elements.
     }
   }

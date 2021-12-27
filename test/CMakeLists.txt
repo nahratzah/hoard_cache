@@ -12,6 +12,7 @@ if (UnitTest++_FOUND)
       detail/pending.cc
       detail/queue.cc
       detail/refcount.cc
+      cache.cc
       max_size_policy.cc
       test_main.cc)
   target_link_libraries (tests UnitTest++ libhoard)

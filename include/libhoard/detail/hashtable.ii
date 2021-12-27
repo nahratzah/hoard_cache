@@ -292,15 +292,15 @@ inline auto hashtable<KeyType, Mapper, Policies...>::get_if_exists(const Keys&..
     std::is_nothrow_copy_constructible_v<mapped_type> && std::is_nothrow_copy_constructible_v<error_type>)
 -> std::variant<std::monostate, mapped_type, error_type> {
   return get_if_exists_(
-      this->hash(keys...),
+      std::invoke(this->hash, keys...),
       [&](const key_type& ht_key) -> bool {
-        return this->equal(ht_key, keys...);
+        return std::invoke(this->equal, ht_key, keys...);
       });
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
 template<bool IncludePending>
-inline auto hashtable<KeyType, Mapper, Policies...>::get(std::size_t hash, function_ref<const key_type&> matcher, std::integral_constant<bool, IncludePending> include_pending)
+inline auto hashtable<KeyType, Mapper, Policies...>::get_(std::size_t hash, function_ref<const key_type&> matcher, std::integral_constant<bool, IncludePending> include_pending)
 -> std::conditional_t<
     IncludePending,
     std::variant<std::monostate, mapped_type, error_type, pending_type*>,
@@ -352,9 +352,26 @@ inline auto hashtable<KeyType, Mapper, Policies...>::get(std::size_t hash, funct
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
+template<typename... Keys>
+inline auto hashtable<KeyType, Mapper, Policies...>::get(const Keys&... keys) noexcept(
+    noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().equal, std::declval<const key_type&>(), std::declval<const Keys&>()...))
+    &&
+    noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().hash, std::declval<const Keys&>()...))
+    &&
+    std::is_nothrow_copy_constructible_v<mapped_type> && std::is_nothrow_copy_constructible_v<error_type>)
+-> std::variant<std::monostate, mapped_type, error_type> {
+  return get_(
+      std::invoke(this->hash, keys...),
+      [&](const key_type& ht_key) -> bool {
+        return std::invoke(this->equal, ht_key, keys...);
+      },
+      std::false_type());
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
 inline auto hashtable<KeyType, Mapper, Policies...>::expire_all() noexcept -> void {
-  auto before_iter = this->bht::before_begin(),
-       before_end = this->bht::before_end();
+  auto before_iter = typename helper_type::iterator(this->bht::before_begin()),
+       before_end = typename helper_type::iterator(this->bht::before_end());
   while (before_iter != before_end) {
     auto iter = std::next(before_iter);
     if (iter->pending()) {
@@ -362,13 +379,13 @@ inline auto hashtable<KeyType, Mapper, Policies...>::expire_all() noexcept -> vo
       before_iter = iter;
     } else {
       if (before_end == iter) before_end = before_iter;
-      this->unlink_and_dispose_(before_iter, disposer_());
+      this->unlink_and_dispose(before_iter.iter_, disposer_());
     }
   }
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
-inline auto hashtable<KeyType, Mapper, Policies...>::expire(std::size_t hash, function_ref<bool(const key_type&)> matcher) -> void {
+inline auto hashtable<KeyType, Mapper, Policies...>::expire_(std::size_t hash, function_ref<bool(const key_type&)> matcher) -> void {
   const auto bucket_idx = this->bucket_for(hash);
   auto before_i = typename helper_type::iterator(this->bht::before_begin(bucket_idx)),
        before_e = typename helper_type::iterator(this->bht::before_end(bucket_idx));
@@ -395,6 +412,16 @@ inline auto hashtable<KeyType, Mapper, Policies...>::expire(std::size_t hash, fu
     // No unlinking. Advance to next element.
     before_i = iter;
   }
+}
+
+template<typename KeyType, typename Mapper, typename... Policies>
+template<typename... Keys>
+inline auto hashtable<KeyType, Mapper, Policies...>::expire(const Keys&... keys) -> void {
+  expire_(
+      std::invoke(this->hash, keys...),
+      [&](const key_type& ht_key) -> bool {
+        return std::invoke(this->equal, ht_key, keys...);
+      });
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
@@ -459,33 +486,25 @@ inline auto hashtable<KeyType, Mapper, Policies...>::cend() const noexcept -> co
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
-template<typename Hasher, typename Equals, typename... KeyArgs, typename... MappedArgs>
-inline auto hashtable<KeyType, Mapper, Policies...>::emplace(const Hasher& hasher, const Equals& equals, std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args) -> void {
-  const auto hash = std::apply(hasher, key_args);
-  expire(
-      hash,
-      [&equals, &key_args](const key_type& key) {
-        return std::apply(
-            [&equals, &key]<typename... Args>(const Args&... key_args) {
-              return std::invoke(equals, key, key_args...);
-            },
-            key_args);
-      });
+template<typename... KeyArgs, typename... MappedArgs>
+inline auto hashtable<KeyType, Mapper, Policies...>::emplace(std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args) -> void {
+  const auto hash = std::apply(this->hash, key_args);
+  std::apply(
+      [this, hash](const auto&... key_args) {
+        this->expire(key_args...);
+      },
+      key_args);
   link(hash, allocate_value_type(pc, std::move(key_args), std::move(mapped_args)));
 
   maintenance_();
 }
 
 template<typename KeyType, typename Mapper, typename... Policies>
-template<typename Hasher, typename Equals, typename KeyArg, typename MappedArg>
-inline auto hashtable<KeyType, Mapper, Policies...>::emplace(const Hasher& hasher, const Equals& equals, KeyArg&& key_arg, MappedArg&& mapped_arg)
+template<typename KeyArg, typename MappedArg>
+inline auto hashtable<KeyType, Mapper, Policies...>::emplace(KeyArg&& key_arg, MappedArg&& mapped_arg)
 -> std::enable_if_t<std::is_constructible_v<key_type, KeyArg> && std::is_constructible_v<mapped_type, MappedArg>> {
-  const auto hash = std::invoke(hasher, key_arg);
-  expire(
-      hash,
-      [&equals, &key_arg](const key_type& key) {
-        return std::invoke(equals, key, key_arg);
-      });
+  const auto hash = std::invoke(this->hash, key_arg);
+  expire(key_arg);
   link(hash, allocate_value_type(std::piecewise_construct, std::forward_as_tuple(std::forward<KeyArg>(key_arg)), std::forward_as_tuple(std::forward<MappedArg>(mapped_arg))));
 
   maintenance_();

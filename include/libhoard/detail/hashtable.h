@@ -420,16 +420,26 @@ class hashtable
    * If no value is present, but the lookup is pending, a pointer to the mapper will be returned.
    */
   template<bool IncludePending>
-  auto get(std::size_t hash, function_ref<const key_type&> matcher, std::integral_constant<bool, IncludePending> include_pending)
+  auto get_(std::size_t hash, function_ref<const key_type&> matcher, std::integral_constant<bool, IncludePending> include_pending)
   -> std::conditional_t<
       IncludePending,
       std::variant<std::monostate, mapped_type, error_type, pending_type*>,
       std::variant<std::monostate, mapped_type, error_type>>;
 
   public:
+  template<typename... Keys>
+  auto get(const Keys&... keys) noexcept(
+      noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().equal, std::declval<const key_type&>(), std::declval<const Keys&>()...))
+      &&
+      noexcept(std::invoke(std::declval<const typename helper_type::ht_base&>().hash, std::declval<const Keys&>()...))
+      &&
+      std::is_nothrow_copy_constructible_v<mapped_type> && std::is_nothrow_copy_constructible_v<error_type>)
+  -> std::variant<std::monostate, mapped_type, error_type>;
+
   ///\brief Expire all elements in the cache.
   auto expire_all() noexcept -> void;
 
+  private:
   /**
    * \brief Expire a specific key.
    * \details
@@ -441,7 +451,11 @@ class hashtable
    *
    * \note In identity-caches, pending lookups are not expired.
    */
-  auto expire(std::size_t hash, function_ref<bool(const key_type&)> matcher) -> void;
+  auto expire_(std::size_t hash, function_ref<bool(const key_type&)> matcher) -> void;
+
+  public:
+  template<typename... Keys>
+  auto expire(const Keys&... keys) -> void;
 
   template<typename... Args>
   auto allocate_value_type(Args&&... args) -> value_pointer;
@@ -462,11 +476,11 @@ class hashtable
   auto cbegin() const noexcept -> const_iterator;
   auto cend() const noexcept -> const_iterator;
 
-  template<typename Hasher, typename Equals, typename... KeyArgs, typename... MappedArgs>
-  auto emplace(const Hasher& hasher, const Equals& equals, std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args) -> void;
+  template<typename... KeyArgs, typename... MappedArgs>
+  auto emplace(std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args) -> void;
 
-  template<typename Hasher, typename Equals, typename KeyArg, typename MappedArg>
-  auto emplace(const Hasher& hasher, const Equals& equals, KeyArg&& key_arg, MappedArg&& mapped_arg)
+  template<typename KeyArg, typename MappedArg>
+  auto emplace(KeyArg&& key_arg, MappedArg&& mapped_arg)
   -> std::enable_if_t<std::is_constructible_v<key_type, KeyArg> && std::is_constructible_v<mapped_type, MappedArg>>;
 
   ///\brief Count number of not-expired elements in the cache.

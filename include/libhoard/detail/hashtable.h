@@ -14,8 +14,10 @@
 #include "meta.h"
 #include "refcount.h"
 #include "value_type.h"
+#include "thread_unsafe_policy.h"
 #include "../equal.h"
 #include "../hash.h"
+#include "../thread_safe_policy.h"
 
 namespace libhoard::detail {
 
@@ -188,7 +190,23 @@ struct hashtable_helper_ {
   ///Takes the dependencies type_list from the \p Policies.
   ///Ensures its set is distinct and none of the Policies are included.
   using policy_dependencies = typename type_list<>::extend_t<typename dependent_policies_<Policies>::type...>::template exclude_t<type_list<Policies...>>::distinct_t;
-  using all_policies = typename type_list<>::extend_t<maybe_default_equal, maybe_default_hash, policy_dependencies, type_list<Policies...>>;
+
+  static inline constexpr bool has_thread_safe_policy = std::disjunction_v<
+      typename type_list<Policies...>::template has_type_t<thread_safe_policy>,
+      typename policy_dependencies::template has_type_t<thread_safe_policy>,
+      typename type_list<Policies...>::template has_type_t<thread_unsafe_policy>,
+      typename policy_dependencies::template has_type_t<thread_unsafe_policy>>;
+  using maybe_extra_mutex_policies = std::conditional_t<
+      has_thread_safe_policy,
+      type_list<>,
+      type_list<thread_unsafe_policy>>;
+
+  using all_policies = typename type_list<>::extend_t<
+      maybe_extra_mutex_policies,
+      maybe_default_equal,
+      maybe_default_hash,
+      policy_dependencies,
+      type_list<Policies...>>;
 
   ///\brief List of types that the value type must inherit from according to policies.
   using vt_base_types = typename all_policies::template transform_t<figure_out_hashtable_value_base_>::template remove_all_t<void>;

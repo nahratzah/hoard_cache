@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "../policies.h"
+#include "../weaken_policy.h"
 
 namespace libhoard::detail {
 

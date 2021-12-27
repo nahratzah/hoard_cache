@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -27,6 +28,8 @@ class cache {
   auto get_if_exists(const Keys&... keys) const
       noexcept(noexcept(std::declval<hashtable_type&>().get_if_exists(std::declval<const Keys&>()...)))
   -> std::optional<T> {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
     auto v = impl_->get_if_exists(keys...);
     switch (v.index()) {
       default:
@@ -40,6 +43,8 @@ class cache {
   auto get(const Keys&... keys) const
       noexcept(noexcept(std::declval<hashtable_type&>().get_if_exists(std::declval<const Keys&>()...)))
   -> std::optional<T> {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
     auto v = impl_->get_if_exists(keys...);
     switch (v.index()) {
       default:
@@ -50,21 +55,29 @@ class cache {
   }
 
   auto clear() noexcept -> void {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
     impl_->expire_all();
   }
 
   template<typename... Keys>
   auto erase(const Keys&... keys) noexcept -> void {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
     impl_->expire(keys...);
   }
 
   template<typename... Keys, typename... MappedArgs>
   auto emplace(std::piecewise_construct_t pc, std::tuple<Keys...> keys, std::tuple<MappedArgs...> mapped) -> void {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
     impl_->emplace(std::move(pc), std::move(keys), std::move(mapped));
   }
 
   template<typename KeyArg, typename MappedArg>
   auto emplace(KeyArg&& key, MappedArg&& mapped) -> void {
+    std::lock_guard<hashtable_type> lck{ *impl_ };
+
     impl_->emplace(std::forward<KeyArg>(key), std::forward<MappedArg>(mapped));
   }
 

@@ -20,7 +20,7 @@ class cache {
 
   public:
   template<typename... Args>
-  explicit cache(Args&&... args) // XXX arguments
+  explicit cache(Args&&... args)
   : impl_(std::make_shared<hashtable_type>(std::forward_as_tuple(std::forward<Args>(args)...)))
   {}
 

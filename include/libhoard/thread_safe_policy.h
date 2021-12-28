@@ -20,19 +20,11 @@ class thread_safe_policy {
     public:
     ///\brief Constructor.
     template<typename... Args, typename Alloc>
-    table_base_impl(const std::tuple<Args...>& args, const Alloc& alloc) {}
+    table_base_impl(const std::tuple<Args...>& args, const Alloc& alloc);
 
-    auto lock() -> void {
-      return mtx_.lock();
-    }
-
-    auto try_lock() -> bool {
-      return mtx_.try_lock();
-    }
-
-    auto unlock() -> void {
-      return mtx_.unlock();
-    }
+    auto lock() -> void;
+    auto try_lock() -> bool;
+    auto unlock() -> void;
 
     private:
     std::mutex mtx_;
@@ -45,3 +37,5 @@ class thread_safe_policy {
 
 
 } /* namespace libhoard */
+
+#include "thread_safe_policy.ii"

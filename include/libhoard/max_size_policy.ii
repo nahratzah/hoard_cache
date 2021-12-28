@@ -8,14 +8,14 @@ inline max_size_policy::max_size::max_size(std::size_t v) noexcept
 {}
 
 
-template<typename HashTable>
+template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Args, typename Alloc>
-inline max_size_policy::table_base<HashTable>::table_base(const std::tuple<Args...>& args, const Alloc& alloc) noexcept
+inline max_size_policy::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, const Alloc& alloc) noexcept
 : max_size_(std::get<max_size>(args).value)
 {}
 
-template<typename HashTable>
-inline auto max_size_policy::table_base<HashTable>::policy_removal_check_() const noexcept -> std::size_t {
+template<typename HashTable, typename ValueType, typename Allocator>
+inline auto max_size_policy::table_base<HashTable, ValueType, Allocator>::policy_removal_check_() const noexcept -> std::size_t {
   auto& self = static_cast<const HashTable&>(*this);
   return self.size() > max_size_ ? self.size() - max_size_ : 0u;
 }

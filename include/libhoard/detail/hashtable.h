@@ -87,14 +87,14 @@ struct figure_out_hashtable_value_base_
 {};
 
 
-template<typename, typename, typename = void>
+template<typename Policy, typename TableType, typename ValueType, typename Allocator, typename = void>
 struct figure_out_hashtable_table_base_ {
   using type = void;
 };
 
-template<typename T, typename TableType>
-struct figure_out_hashtable_table_base_<T, TableType, std::void_t<typename T::template table_base<TableType>>> {
-  using type = typename T::template table_base<TableType>;
+template<typename Policy, typename TableType, typename ValueType, typename Allocator>
+struct figure_out_hashtable_table_base_<Policy, TableType, ValueType, Allocator, std::void_t<typename Policy::template table_base<TableType, ValueType, Allocator>>> {
+  using type = typename Policy::template table_base<TableType, ValueType, Allocator>;
 };
 
 
@@ -226,7 +226,7 @@ struct hashtable_helper_ {
 
   ///\brief Helper to figure out table base.
   template<typename Policy>
-  using bound_figure_out_hashtable_table_base_ = figure_out_hashtable_table_base_<Policy, hashtable<KeyType, Mapper, Policies...>>;
+  using bound_figure_out_hashtable_table_base_ = figure_out_hashtable_table_base_<Policy, hashtable<KeyType, Mapper, Policies...>, value_type, allocator_type>;
   ///\brief List of types that the hashtable must derive from according to policies.
   using ht_base_types = typename all_policies::template transform_t<bound_figure_out_hashtable_table_base_>::template remove_all_t<void>;
   ///\brief Type that derives from ht_base_types.

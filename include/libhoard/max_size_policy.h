@@ -26,7 +26,8 @@ class max_size_policy {
 
   ///\brief Policy implementation.
   ///\tparam HashTable The derived hashtable type.
-  template<typename HashTable>
+  ///\tparam ValueType Type held by the hashtable. (This parameter is unused.)
+  template<typename HashTable, typename ValueType, typename Allocator>
   class table_base {
     public:
     ///\brief Constructor.

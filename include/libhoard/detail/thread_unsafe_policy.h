@@ -27,7 +27,7 @@ class thread_unsafe_policy {
   };
 
   public:
-  template<typename HashTable>
+  template<typename HashTable, typename ValueType, typename Allocator>
   using table_base = table_base_impl;
 };
 

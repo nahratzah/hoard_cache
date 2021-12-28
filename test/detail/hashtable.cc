@@ -9,7 +9,7 @@
 
 class hashtable_fixture {
   public:
-  using hashtable_type = libhoard::detail::hashtable<std::string, libhoard::detail::mapped_value<std::string, std::allocator<std::string>, std::error_code>>;
+  using hashtable_type = libhoard::detail::hashtable<std::string, std::string, std::error_code>;
 
   template<typename... Args>
   auto init_test(Args&&... args) -> void {

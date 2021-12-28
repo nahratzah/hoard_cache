@@ -16,7 +16,7 @@ namespace libhoard {
 template<typename KeyType, typename T, typename... Policies>
 class cache {
   private:
-  using hashtable_type = detail::hashtable<KeyType, detail::mapped_value<T, std::allocator<T>, int>, Policies...>;
+  using hashtable_type = detail::hashtable<KeyType, T, int, Policies...>;
 
   public:
   template<typename... Args>

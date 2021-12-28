@@ -212,4 +212,15 @@ template<typename... Types> struct type_list {
 };
 
 
+template<typename...> struct select_single_element;
+
+template<typename T>
+struct select_single_element<T> {
+  using type = T;
+};
+
+template<typename... Types>
+using select_single_element_t = typename select_single_element<Types...>::type;
+
+
 } /* namespace libhoard::detail */

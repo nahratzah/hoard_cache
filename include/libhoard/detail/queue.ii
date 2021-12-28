@@ -83,16 +83,16 @@ inline auto basic_queue::invariant() const noexcept -> bool {
 }
 
 
-template<typename HashTable>
+template<typename HashTable, typename ValueType>
 template<typename... Args, typename Alloc>
-inline queue<HashTable>::queue([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] Alloc&& alloc) noexcept
+inline queue<HashTable, ValueType>::queue([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] Alloc&& alloc) noexcept
 {}
 
-template<typename HashTable>
-inline queue<HashTable>::~queue() noexcept = default;
+template<typename HashTable, typename ValueType>
+inline queue<HashTable, ValueType>::~queue() noexcept = default;
 
-template<typename HashTable>
-inline auto queue<HashTable>::lru_expire_(std::size_t count) noexcept -> void {
+template<typename HashTable, typename ValueType>
+inline auto queue<HashTable, ValueType>::lru_expire_(std::size_t count) noexcept -> void {
   auto iter = q_.end();
   while (iter != q_.begin() && count > 0) {
     --iter;
@@ -102,26 +102,26 @@ inline auto queue<HashTable>::lru_expire_(std::size_t count) noexcept -> void {
     if (iter->hot_) break;
 
     if constexpr(HashTable::policy_type_list::template has_type_v<weaken_policy>)
-      static_cast<typename HashTable::value_type&>(*iter).weaken();
+      static_cast<ValueType&>(*iter).weaken();
     else
-      static_cast<typename HashTable::value_type&>(*iter).mark_expired();
+      static_cast<ValueType&>(*iter).mark_expired();
     --count;
   }
 }
 
-template<typename HashTable>
-inline auto queue<HashTable>::on_create_(value_base* v) noexcept -> void {
+template<typename HashTable, typename ValueType>
+inline auto queue<HashTable, ValueType>::on_create_(value_base* v) noexcept -> void {
   this->basic_queue::on_create_(v,
       [](value_base* v) noexcept {
-        static_cast<typename HashTable::value_type*>(v)->strengthen();
+        static_cast<ValueType*>(v)->strengthen();
       });
 }
 
-template<typename HashTable>
-inline auto queue<HashTable>::on_hit_(value_base* v) noexcept -> void {
+template<typename HashTable, typename ValueType>
+inline auto queue<HashTable, ValueType>::on_hit_(value_base* v) noexcept -> void {
   this->basic_queue::on_hit_(v,
       [](value_base* v) noexcept {
-        static_cast<typename HashTable::value_type*>(v)->strengthen();
+        static_cast<ValueType*>(v)->strengthen();
       });
 }
 

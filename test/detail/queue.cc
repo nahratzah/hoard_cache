@@ -43,7 +43,7 @@ class queue_fixture_impl {
   };
 
   class impl
-  : public libhoard::detail::queue<impl>
+  : public libhoard::detail::queue<impl, element>
   {
     public:
     using value_type = element;
@@ -53,11 +53,11 @@ class queue_fixture_impl {
         libhoard::detail::type_list<>>;
 
     impl()
-    : libhoard::detail::queue<impl>(std::make_tuple(), std::allocator<int>()) // Queue takes arguments, but doesn't use them.
+    : libhoard::detail::queue<impl, element>(std::make_tuple(), std::allocator<int>()) // Queue takes arguments, but doesn't use them.
     {}
 
     auto lru_expire_(std::size_t count) noexcept {
-      return this->libhoard::detail::queue<impl>::lru_expire_(count);
+      return this->libhoard::detail::queue<impl, element>::lru_expire_(count);
     }
   };
 

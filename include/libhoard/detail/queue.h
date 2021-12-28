@@ -10,14 +10,14 @@ namespace libhoard::detail {
 
 ///\brief Common type-agnostic part of queue.
 class basic_queue {
-  template<typename HashTable> friend class queue;
+  template<typename HashTable, typename ValueType> friend class queue;
 
   public:
   class value_base
   : public basic_linked_list::link
   {
     friend basic_queue;
-    template<typename> friend class queue;
+    template<typename HashTable, typename ValueType> friend class queue;
 
     protected:
     template<typename HashTable>
@@ -88,7 +88,7 @@ class basic_queue {
  * The hot and cold zones have the same size, thus a cache-hit
  * may cause another element to become cold.
  */
-template<typename HashTable>
+template<typename HashTable, typename ValueType>
 class queue
 : private basic_queue
 {
@@ -122,7 +122,7 @@ class queue
  */
 struct queue_policy {
   template<typename HashTable, typename ValueType, typename Allocator>
-  using table_base = queue<HashTable>;
+  using table_base = queue<HashTable, ValueType>;
 
   using value_base = basic_queue::value_base;
 };

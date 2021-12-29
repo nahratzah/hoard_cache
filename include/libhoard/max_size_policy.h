@@ -32,8 +32,8 @@ class max_size_policy {
     public:
     ///\brief Constructor.
     ///\note Requires one of the elements in \p args to be max_size
-    template<typename... Args, typename Alloc>
-    table_base(const std::tuple<Args...>& args, const Alloc& alloc) noexcept;
+    template<typename... Args>
+    table_base(const std::tuple<Args...>& args, const Allocator& alloc) noexcept;
 
     ///\brief Tell the cache to maybe expire some elements.
     auto policy_removal_check_() const noexcept -> std::size_t;

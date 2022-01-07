@@ -1,4 +1,4 @@
-#include <libhoard/policies.h>
+#include <libhoard/max_size_policy.h>
 
 #include <string>
 #include <system_error>

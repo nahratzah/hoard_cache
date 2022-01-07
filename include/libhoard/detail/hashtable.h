@@ -7,6 +7,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <utility>
 #include <variant>
 
 #include "basic_hashtable.h"
@@ -20,6 +21,7 @@
 #include "../equal.h"
 #include "../hash.h"
 #include "../thread_safe_policy.h"
+#include "../resolver_policy.h"
 
 namespace libhoard::detail {
 
@@ -57,6 +59,28 @@ struct has_allocator
 
 template<typename Allocator>
 struct has_allocator<allocator<Allocator>>
+: public std::true_type
+{};
+
+
+template<typename>
+struct has_resolver
+: public std::false_type
+{};
+
+template<typename Functor>
+struct has_resolver<resolver_policy<Functor>>
+: public std::true_type
+{};
+
+
+template<typename>
+struct has_async_resolver
+: public std::false_type
+{};
+
+template<typename Functor>
+struct has_async_resolver<async_resolver_policy<Functor>>
 : public std::true_type
 {};
 
@@ -188,6 +212,8 @@ struct hashtable_helper_ {
   static inline constexpr bool has_equal_policy = std::disjunction_v<has_equal<Policies>...>;
   static inline constexpr bool has_hash_policy = std::disjunction_v<has_hash<Policies>...>;
   static inline constexpr bool has_allocator_policy = std::disjunction_v<has_allocator<Policies>...>;
+  static inline constexpr bool has_resolver_policy = std::disjunction_v<has_resolver<Policies>...>;
+  static inline constexpr bool has_async_resolver_policy = std::disjunction_v<has_async_resolver<Policies>...>;
 
   using maybe_default_equal = std::conditional_t<
       has_equal_policy,
@@ -384,7 +410,6 @@ template<typename KeyType, typename T, typename Error, typename... Policies>
 class hashtable
 : private basic_hashtable_allocator_member<typename hashtable_helper_<KeyType, T, Error, Policies...>::allocator_type>,
   private hashtable_helper_<KeyType, T, Error, Policies...>::bht,
-  public std::enable_shared_from_this<hashtable<KeyType, T, Error, Policies...>>,
   public hashtable_helper_<KeyType, T, Error, Policies...>::ht_base
 {
   private:

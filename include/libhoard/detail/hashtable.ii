@@ -361,6 +361,7 @@ inline auto hashtable<KeyType, T, Error, Policies...>::get_(std::size_t hash, fu
     // No match and no expiry. Advance to next element.
     before_i = iter;
   }
+
   this->on_miss_();
   return {};
 }
@@ -374,12 +375,25 @@ inline auto hashtable<KeyType, T, Error, Policies...>::get(const Keys&... keys) 
     &&
     std::is_nothrow_copy_constructible_v<mapped_type> && std::is_nothrow_copy_constructible_v<error_type>)
 -> std::variant<std::monostate, mapped_type, error_type> {
-  return get_(
-      std::invoke(this->hash, keys...),
+  static_assert(!helper_type::has_async_resolver_policy, "can't use synchronous 'get' method with asynchronous resolver");
+
+  const std::size_t hash = std::invoke(this->hash, keys...);
+  auto get_result = get_(
+      hash,
       [&](const key_type& ht_key) -> bool {
         return std::invoke(this->equal, ht_key, keys...);
       },
       std::false_type());
+
+  if constexpr(helper_type::has_resolver_policy) { // We have a resolver...
+    if (get_result.index() == 0) { // ... and we don't have a value...
+      // ... so we'll use the resolver to create a new value on the spot.
+      const value_pointer new_value = this->resolve(hash, keys...);
+      get_result = new_value->get(std::false_type());
+    }
+  }
+
+  return get_result;
 }
 
 template<typename KeyType, typename T, typename Error, typename... Policies>

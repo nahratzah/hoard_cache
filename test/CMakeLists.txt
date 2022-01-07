@@ -14,6 +14,7 @@ if (UnitTest++_FOUND)
       detail/refcount.cc
       cache.cc
       max_size_policy.cc
+      resolver_policy.cc
       test_main.cc)
   target_link_libraries (tests UnitTest++ libhoard)
   target_include_directories(tests PUBLIC ${UTPP_INCLUDE_DIRS})

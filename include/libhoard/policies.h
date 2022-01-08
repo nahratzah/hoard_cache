@@ -6,6 +6,7 @@
 #include "shared_from_this_policy.h"
 #include "thread_safe_policy.h"
 #include "weaken_policy.h"
+#include "resolver_policy.h"
 
 #include "detail/meta.h"
 #include "detail/queue.h"

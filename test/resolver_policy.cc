@@ -69,7 +69,8 @@ SUITE(async_resolver_policy) {
     struct resolver_impl {
       resolver_impl(fixture* self) : self(self) {}
 
-      auto operator()(auto callback_ptr, int n) const -> void {
+      template<typename CallbackPtr>
+      auto operator()(const CallbackPtr& callback_ptr, int n) const -> void {
         if (self->error) {
           callback_ptr->assign_error(self->error);
           self->error = nullptr;
@@ -84,8 +85,9 @@ SUITE(async_resolver_policy) {
     struct thread_resolver_impl {
       thread_resolver_impl(fixture* self) : self(self) {}
 
-      auto operator()(auto callback_ptr, int n) const -> void {
-        self->tasks.emplace_back(resolver_impl(self), std::move(callback_ptr), n);
+      template<typename CallbackPtr>
+      auto operator()(CallbackPtr&& callback_ptr, int n) const -> void {
+        self->tasks.emplace_back(resolver_impl(self), std::forward<CallbackPtr>(callback_ptr), n);
       }
 
       fixture*const self;

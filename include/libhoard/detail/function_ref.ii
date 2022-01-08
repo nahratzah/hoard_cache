@@ -15,7 +15,7 @@ inline function_ref<R(Args...)>::function_ref(Fn&& fn) noexcept
           *static_cast<std::remove_reference_t<Fn>*>(vref), // reintroduces const/volatile modifiers.
           std::forward<Args>(args)...);
     }),
-  ref_(const_cast<std::remove_cvref_t<Fn>*>(std::addressof(fn)))
+  ref_(const_cast<std::remove_cv_t<std::remove_reference_t<Fn>>*>(std::addressof(fn)))
 {}
 
 template<typename R, typename... Args>
@@ -32,7 +32,7 @@ inline function_ref<R(Args...) noexcept>::function_ref(Fn&& fn) noexcept
           *static_cast<std::remove_reference_t<Fn>*>(vref), // reintroduces const/volatile modifiers.
           std::forward<Args>(args)...);
     }),
-  ref_(const_cast<std::remove_cvref_t<Fn>*>(std::addressof(fn)))
+  ref_(const_cast<std::remove_cv_t<std::remove_reference_t<Fn>>*>(std::addressof(fn)))
 {}
 
 template<typename R, typename... Args>

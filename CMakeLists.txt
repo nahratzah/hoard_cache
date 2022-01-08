@@ -47,8 +47,8 @@ set(detail_headers
     )
 
 add_library(libhoard INTERFACE)
-set_property (TARGET libhoard PROPERTY CXX_STANDARD 20)
-set_property (TARGET libhoard PROPERTY CXX_STANDARD_REQUIRED 20)
+set_property (TARGET libhoard PROPERTY CXX_STANDARD 17)
+set_property (TARGET libhoard PROPERTY CXX_STANDARD_REQUIRED 17)
 
 find_package (Threads REQUIRED)
 if(CMAKE_USE_PTHREADS_INIT)

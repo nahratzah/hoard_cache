@@ -65,14 +65,14 @@ class async_resolver_policy {
     {}
 
     template<typename... Keys>
-    auto async_resolve(std::size_t hash, Keys&&... keys) -> detail::refcount_ptr<ValueType, Allocator> {
+    auto async_resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator> {
       using callback_allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<callback>;
 
       auto self = static_cast<HashTable*>(this);
       auto new_value = self->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...));
 
       const std::shared_ptr<callback> callback_ptr = std::allocate_shared<callback>(callback_allocator_type(self->get_allocator()), self->shared_from_this(), new_value);
-      resolver_(callback_ptr, std::forward<Keys>(keys)...);
+      resolver_(callback_ptr, keys...);
 
       self->link(hash, new_value);
       callback_ptr->live = true;

@@ -121,12 +121,12 @@ class basic_hashtable_algorithms::element {
   friend basic_hashtable_algorithms::const_iterator;
 
   protected:
-  constexpr element() noexcept = default;
-  constexpr element(const element&) noexcept {}
-  constexpr element(element&&) noexcept {}
+  element() noexcept = default;
+  element(const element&) noexcept {}
+  element(element&&) noexcept {}
   ~element() noexcept = default;
-  constexpr auto operator=(const element&) noexcept -> element& { return *this; }
-  constexpr auto operator=(element&&) noexcept -> element& { return *this; }
+  auto operator=(const element&) noexcept -> element& { return *this; }
+  auto operator=(element&&) noexcept -> element& { return *this; }
 
   public:
   auto hash() const noexcept -> std::size_t { return hash_; }

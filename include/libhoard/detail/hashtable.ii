@@ -1,6 +1,155 @@
 #pragma once
 
 namespace libhoard::detail {
+namespace {
+
+
+template<typename SelfType, typename ValueType>
+class on_create_fn {
+  public:
+  on_create_fn(SelfType* self, ValueType* vptr) noexcept
+  : self(self),
+    vptr(vptr)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().on_create_(std::declval<ValueType*>())) {
+    return self->T::on_create_(vptr);
+  }
+
+  private:
+  SelfType* self;
+  ValueType* vptr;
+};
+
+template<typename SelfType, typename ValueType>
+class on_assign_fn {
+  public:
+  on_assign_fn(SelfType* self, ValueType* vptr, bool value, bool assigned_via_callback) noexcept
+  : self(self),
+    vptr(vptr),
+    value(value),
+    assigned_via_callback(assigned_via_callback)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().on_assign_(std::declval<ValueType*>(), std::declval<bool>(), std::declval<bool>())) {
+    return self->T::on_assign_(vptr, value, assigned_via_callback);
+  }
+
+  private:
+  SelfType* self;
+  ValueType* vptr;
+  bool value;
+  bool assigned_via_callback;
+};
+
+template<typename SelfType, typename ValueType>
+class on_unlink_fn {
+  public:
+  on_unlink_fn(SelfType* self, ValueType* vptr) noexcept
+  : self(self),
+    vptr(vptr)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().on_unlink_(std::declval<ValueType*>())) {
+    return self->T::on_unlink_(vptr);
+  }
+
+  private:
+  SelfType* self;
+  ValueType* vptr;
+};
+
+template<typename SelfType, typename ValueType>
+class on_hit_fn {
+  public:
+  on_hit_fn(SelfType* self, ValueType* vptr) noexcept
+  : self(self),
+    vptr(vptr)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().on_hit_(std::declval<ValueType*>())) {
+    return self->T::on_hit_(vptr);
+  }
+
+  private:
+  SelfType* self;
+  ValueType* vptr;
+};
+
+template<typename SelfType>
+class on_miss_fn {
+  public:
+  explicit on_miss_fn(SelfType* self) noexcept
+  : self(self)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().on_miss_()) {
+    return self->T::on_miss_();
+  }
+
+  private:
+  SelfType* self;
+};
+
+template<typename SelfType>
+class on_maintenance_fn {
+  public:
+  explicit on_maintenance_fn(SelfType* self) noexcept
+  : self(self)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().on_maintenance_()) {
+    return self->T::on_maintenance_();
+  }
+
+  private:
+  SelfType* self;
+};
+
+template<typename SelfType>
+class policy_removal_check_fn {
+  public:
+  policy_removal_check_fn(const SelfType* self, std::size_t* max) noexcept
+  : self(self),
+    max(max)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> std::void_t<decltype(std::declval<T&>().policy_removal_check_())> {
+    std::size_t local_count_to_remove = self->T::policy_removal_check_();
+    if (local_count_to_remove > *max)
+      *max = local_count_to_remove;
+  }
+
+  private:
+  const SelfType* self;
+  std::size_t* max;
+};
+
+template<typename SelfType>
+class init_fn {
+  public:
+  explicit init_fn(SelfType* self) noexcept
+  : self(self)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().init()) {
+    return self->T::init();
+  }
+
+  private:
+  SelfType* self;
+};
+
+
+} /* namespace libhoard::detail::<unnamed> */
 
 
 template<typename T>
@@ -20,63 +169,45 @@ inline hashtable_policy_container<ValueType, BaseTypes...>::~hashtable_policy_co
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_create_(ValueType* vptr) noexcept -> void {
-  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_create_(std::declval<ValueType*>()))> {
-        return this->T::on_create_(vptr);
-      });
+  base_invoke_(on_create_fn<hashtable_policy_container, ValueType>(this, vptr));
 }
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_assign_(ValueType* vptr, bool value, bool assigned_via_callback) noexcept -> void {
-  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_assign_(std::declval<ValueType*>(), std::declval<bool>(), std::declval<bool>()))> {
-        return this->T::on_assign_(vptr, value, assigned_via_callback);
-      });
+  base_invoke_(on_assign_fn<hashtable_policy_container, ValueType>(this, vptr, value, assigned_via_callback));
 }
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_unlink_(ValueType* vptr) noexcept -> void {
-  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_unlink_(std::declval<ValueType*>()))> {
-        return this->T::on_unlink_(vptr);
-      });
+  base_invoke_(on_unlink_fn<hashtable_policy_container, ValueType>(this, vptr));
 }
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_hit_(ValueType* vptr) noexcept -> void {
-  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_hit_(std::declval<ValueType*>()))> {
-        return this->T::on_hit_(vptr);
-      });
+  base_invoke_(on_hit_fn<hashtable_policy_container, ValueType>(this, vptr));
 }
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_miss_() noexcept -> void {
-  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_miss_())> {
-        return this->T::on_miss_();
-      });
+  base_invoke_(on_miss_fn<hashtable_policy_container>(this));
 }
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_maintenance_() noexcept -> void {
-  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().on_maintenance_())> {
-        return this->T::on_maintenance_();
-      });
+  base_invoke_(on_maintenance_fn<hashtable_policy_container>(this));
 }
 
 template<typename ValueType, typename... BaseTypes>
 template<bool Enable>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::policy_removal_check_() const noexcept -> std::enable_if_t<Enable, std::size_t> {
   std::size_t count_to_remove = 0;
-  base_invoke_([this, &count_to_remove]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<const T&>().policy_removal_check_())> {
-        std::size_t local_count_to_remove = this->T::policy_removal_check_();
-        if (local_count_to_remove > count_to_remove)
-          count_to_remove = local_count_to_remove;
-      });
+  base_invoke_(policy_removal_check_fn<hashtable_policy_container>(this, &count_to_remove));
   return count_to_remove;
 }
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::init() -> void {
-  base_invoke_([=]<typename T>([[maybe_unused]] T* nil) -> std::void_t<decltype(std::declval<T&>().init())> {
-        this->T::init();
-      });
+  base_invoke_(init_fn<hashtable_policy_container>(this));
 }
 
 template<typename ValueType, typename... BaseTypes>

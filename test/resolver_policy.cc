@@ -4,6 +4,8 @@
 #include <future>
 #include <string>
 #include <tuple>
+#include <thread>
+#include <vector>
 
 #include "UnitTest++/UnitTest++.h"
 
@@ -58,5 +60,91 @@ SUITE(resolver_policy) {
     }
 
     CHECK_EQUAL(std::string("xxx"), three.get());
+  }
+}
+
+SUITE(async_resolver_policy) {
+  class fixture {
+    public:
+    struct resolver_impl {
+      resolver_impl(fixture* self) : self(self) {}
+
+      auto operator()(auto callback_ptr, int n) const -> void {
+        if (self->error) {
+          callback_ptr->assign_error(self->error);
+          self->error = nullptr;
+        } else {
+          callback_ptr->assign(n, 'x');
+        }
+      }
+
+      fixture*const self;
+    };
+
+    struct thread_resolver_impl {
+      thread_resolver_impl(fixture* self) : self(self) {}
+
+      auto operator()(auto callback_ptr, int n) const -> void {
+        self->tasks.emplace_back(resolver_impl(self), std::move(callback_ptr), n);
+      }
+
+      fixture*const self;
+    };
+
+    using hashtable_type = libhoard::detail::hashtable<int, std::string, std::exception_ptr, libhoard::async_resolver_policy<resolver_impl>>;
+
+    ~fixture() {
+      std::for_each(tasks.begin(), tasks.end(), [](std::thread& thr) { thr.join(); });
+    }
+
+    std::vector<std::thread> tasks;
+    std::exception_ptr error; // If set, next callback invocation will install an error.
+    std::shared_ptr<hashtable_type> hashtable = std::make_shared<hashtable_type>(std::make_tuple(libhoard::async_resolver_policy<resolver_impl>(this)));
+  };
+
+  class test_exception : public std::exception {};
+
+  TEST_FIXTURE(fixture, async_get) {
+    std::future<std::string> three;
+
+    {
+      std::promise<std::string> three_prom;
+      three = three_prom.get_future();
+      hashtable->async_get(
+          [three_prom=std::move(three_prom)](const std::string& value, const std::exception_ptr& error, auto immediate) mutable {
+            CHECK(immediate() == true);
+
+            if (error)
+              three_prom.set_exception(error);
+            else
+              three_prom.set_value(value);
+          },
+          3);
+    }
+
+    CHECK_EQUAL(std::string("xxx"), three.get());
+  }
+
+  TEST_FIXTURE(fixture, async_get_with_error) {
+    const std::exception_ptr expected_error = std::make_exception_ptr(test_exception());
+    this->error = expected_error; // Tell fixute to emit an error.
+    std::future<std::string> three;
+
+    {
+      std::promise<std::string> three_prom;
+      three = three_prom.get_future();
+      hashtable->async_get(
+          [three_prom=std::move(three_prom)](const std::string& value, const std::exception_ptr& error, auto immediate) mutable {
+            CHECK(immediate() == true);
+
+            if (error)
+              three_prom.set_exception(error);
+            else
+              three_prom.set_value(value);
+          },
+          3);
+    }
+
+    CHECK_THROW(three.get(), test_exception);
   }
 }

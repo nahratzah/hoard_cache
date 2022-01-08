@@ -166,6 +166,8 @@ template<typename ValueType, typename... BaseTypes>
 class hashtable_policy_container
 : public BaseTypes...
 {
+  template<typename Functor> friend class ::libhoard::async_resolver_policy; // Allow async_resolver_policy to emit the on_asign_ event.
+
   public:
   static constexpr bool has_policy_removal_check = std::disjunction_v<has_policy_removal_check_<BaseTypes>...>;
 

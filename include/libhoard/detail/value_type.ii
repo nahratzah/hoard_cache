@@ -127,8 +127,8 @@ inline auto value_type<KeyType, Mapper, BaseTypes...>::get(std::true_type includ
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
 template<typename... Args>
-inline auto value_type<KeyType, Mapper, BaseTypes...>::assign(Args&&... args) noexcept(noexcept(std::declval<mapper&>().assign(std::declval<Args>()...))) -> pending_type {
-  return mapped_.assign(std::forward<Args>(args)...);
+inline auto value_type<KeyType, Mapper, BaseTypes...>::assign(Args&&... args) noexcept(noexcept(std::declval<mapper&>().assign(std::declval<Args>()...))) -> void {
+  mapped_.assign(std::forward<Args>(args)...);
 }
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>

@@ -74,7 +74,7 @@ class value_type
   auto get_pending() noexcept -> pending_type*;
 
   template<typename... Args>
-  auto assign(Args&&... args) noexcept(noexcept(std::declval<mapper&>().assign(std::declval<Args>()...))) -> pending_type;
+  auto assign(Args&&... args) noexcept(noexcept(std::declval<mapper&>().assign(std::declval<Args>()...))) -> void;
   auto assign_error(error_type ex) noexcept -> void;
 };
 

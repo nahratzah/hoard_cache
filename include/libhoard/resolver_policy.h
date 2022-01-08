@@ -1,11 +1,8 @@
 #pragma once
 
 #include <cstddef>
-#include <functional>
 #include <memory>
-#include <mutex>
 #include <tuple>
-#include <utility>
 
 #include "shared_from_this_policy.h"
 #include "detail/meta.h"

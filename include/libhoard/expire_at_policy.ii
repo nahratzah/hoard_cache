@@ -1,0 +1,22 @@
+#pragma once
+
+namespace libhoard {
+
+
+template<typename Clock>
+template<typename Table>
+inline expire_at_policy<Clock>::value_base::value_base([[maybe_unused]] const Table& table) noexcept
+{}
+
+template<typename Clock>
+inline auto expire_at_policy<Clock>::value_base::expired() const noexcept -> bool {
+  return Clock::now() >= expire_tp_;
+}
+
+template<typename Clock>
+inline auto expire_at_policy<Clock>::value_base::expire_at(typename Clock::time_point expire_tp) noexcept -> void {
+  if (expire_tp_ > expire_tp) expire_tp_ = expire_tp;
+}
+
+
+} /* namespace libhoard */

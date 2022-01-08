@@ -1,6 +1,29 @@
 #pragma once
 
 namespace libhoard::detail {
+namespace {
+
+
+template<typename SelfType>
+class expired_fn {
+  public:
+  expired_fn(const SelfType* self, bool* disj_expired) noexcept
+  : self(self),
+    disj_expired(disj_expired)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> std::void_t<decltype(std::declval<T&>().expired())> {
+    if (!*disj_expired && self->T::expired()) *disj_expired = true;
+  }
+
+  private:
+  const SelfType* self;
+  bool* disj_expired;
+};
+
+
+} /* namespace libhoard::detail::<unnamed> */
 
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
@@ -77,7 +100,11 @@ inline auto value_type<KeyType, Mapper, BaseTypes...>::pending() const noexcept 
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
 inline auto value_type<KeyType, Mapper, BaseTypes...>::expired() const noexcept -> bool {
-  return mapped_.expired();
+  typename type_list<BaseTypes...>::template apply_t<maybe_apply_for_each_type> functors;
+
+  bool is_expired = mapped_.expired();
+  functors(expired_fn(this, &is_expired));
+  return is_expired;
 }
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>

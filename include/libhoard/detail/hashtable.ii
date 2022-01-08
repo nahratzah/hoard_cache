@@ -397,6 +397,58 @@ inline auto hashtable<KeyType, T, Error, Policies...>::get(const Keys&... keys) 
 }
 
 template<typename KeyType, typename T, typename Error, typename... Policies>
+template<typename CompletionCallback, typename... Keys>
+inline auto hashtable<KeyType, T, Error, Policies...>::async_get(CompletionCallback&& callback, const Keys&... keys) -> void {
+  value_pointer new_value_ptr;
+  const std::size_t hash = std::invoke(this->hash, keys...);
+  auto get_result = get_(
+      hash,
+      [&](const key_type& ht_key) -> bool {
+        return std::invoke(this->equal, ht_key, keys...);
+      },
+      std::true_type());
+
+  // Invoke the resolver if value wasn't found.
+  if constexpr(helper_type::has_async_resolver_policy) {
+    if (get_result.index() == 0) {
+      new_value_ptr = this->async_resolve(hash, keys...);
+      get_result = new_value_ptr->get(std::true_type());
+    }
+  } else if constexpr(helper_type::has_resolver_policy) {
+    if (get_result.index() == 0) {
+      new_value_ptr = this->resolve(hash, keys...);
+      get_result = new_value_ptr->get(std::true_type());
+    }
+  }
+
+  switch (get_result.index()) {
+    case 0: // Not found.
+      break;
+    case 1: // Holds a value.
+      std::invoke(std::forward<CompletionCallback>(callback), std::get<1>(std::move(get_result)), error_type(), std::true_type());
+      break;
+    case 2: // Holds an error.
+      std::invoke(std::forward<CompletionCallback>(callback), mapped_type(), std::get<2>(std::move(get_result)), std::true_type());
+      break;
+    case 3: // Lookup pending.
+      if constexpr(std::is_copy_constructible_v<std::decay_t<CompletionCallback>>) {
+        std::get<3>(get_result)->add_callback(
+            [callback=std::forward<CompletionCallback>(callback)](const mapped_type& mapped_value, const error_type& error_value) mutable {
+              std::invoke(std::forward<CompletionCallback>(callback), mapped_value, error_value, std::false_type());
+            });
+      } else {
+        // We would prefer to use std::move_only_function, but that's not available until C++23.
+        // So in order to make the non-copyable callback copyable, we wrap it inside a shared pointer instead.
+        std::get<3>(get_result)->add_callback(
+            [callback=std::allocate_shared<std::decay_t<CompletionCallback>>(this->get_allocator(), std::forward<CompletionCallback>(callback))](const mapped_type& mapped_value, const error_type& error_value) mutable {
+              std::invoke(std::forward<CompletionCallback>(*callback), mapped_value, error_value, std::false_type());
+            });
+      }
+      break;
+  }
+}
+
+template<typename KeyType, typename T, typename Error, typename... Policies>
 inline auto hashtable<KeyType, T, Error, Policies...>::expire_all() noexcept -> void {
   auto before_iter = typename helper_type::iterator(this->bht::before_begin()),
        before_end = typename helper_type::iterator(this->bht::before_end());

@@ -1,7 +1,8 @@
 #include <libhoard/resolver_policy.h>
 
+#include <exception>
+#include <future>
 #include <string>
-#include <system_error>
 #include <tuple>
 
 #include "UnitTest++/UnitTest++.h"
@@ -18,12 +19,12 @@ SUITE(resolver_policy) {
     };
 
     static_assert(libhoard::detail::has_resolver<libhoard::resolver_policy<resolver_impl>>::value);
-    static_assert(libhoard::detail::hashtable_helper_<int, std::string, std::error_code, libhoard::resolver_policy<resolver_impl>>::has_resolver_policy,
+    static_assert(libhoard::detail::hashtable_helper_<int, std::string, std::exception_ptr, libhoard::resolver_policy<resolver_impl>>::has_resolver_policy,
         "expected the helper type to detect our resolver_policy");
-    static_assert(!libhoard::detail::hashtable_helper_<int, std::string, std::error_code, libhoard::resolver_policy<resolver_impl>>::has_async_resolver_policy,
+    static_assert(!libhoard::detail::hashtable_helper_<int, std::string, std::exception_ptr, libhoard::resolver_policy<resolver_impl>>::has_async_resolver_policy,
         "this is not an async resolver policy");
 
-    using hashtable_type = libhoard::detail::hashtable<int, std::string, std::error_code, libhoard::resolver_policy<resolver_impl>>;
+    using hashtable_type = libhoard::detail::hashtable<int, std::string, std::exception_ptr, libhoard::resolver_policy<resolver_impl>>;
 
     std::unique_ptr<hashtable_type> hashtable = std::make_unique<hashtable_type>(std::make_tuple(libhoard::resolver_policy<resolver_impl>()));
   };
@@ -36,5 +37,26 @@ SUITE(resolver_policy) {
     auto four = hashtable->get(4);
     CHECK_EQUAL(1, four.index());
     CHECK_EQUAL(std::string("xxxx"), std::get<1>(four));
+  }
+
+  TEST_FIXTURE(fixture, async_get) {
+    std::future<std::string> three;
+
+    {
+      std::promise<std::string> three_prom;
+      three = three_prom.get_future();
+      hashtable->async_get(
+          [three_prom=std::move(three_prom)](const std::string& value, const std::exception_ptr& error, auto immediate) mutable {
+            CHECK(immediate() == true);
+
+            if (error)
+              three_prom.set_exception(error);
+            else
+              three_prom.set_value(value);
+          },
+          3);
+    }
+
+    CHECK_EQUAL(std::string("xxx"), three.get());
   }
 }

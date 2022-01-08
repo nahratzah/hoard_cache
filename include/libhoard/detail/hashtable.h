@@ -511,6 +511,9 @@ class hashtable
       std::is_nothrow_copy_constructible_v<mapped_type> && std::is_nothrow_copy_constructible_v<error_type>)
   -> std::variant<std::monostate, mapped_type, error_type>;
 
+  template<typename CompletionCallback, typename... Keys>
+  auto async_get(CompletionCallback&& callback, const Keys&... keys) -> void;
+
   ///\brief Expire all elements in the cache.
   auto expire_all() noexcept -> void;
 

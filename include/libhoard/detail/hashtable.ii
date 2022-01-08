@@ -440,7 +440,7 @@ inline auto hashtable<KeyType, T, Error, Policies...>::async_get(CompletionCallb
         // We would prefer to use std::move_only_function, but that's not available until C++23.
         // So in order to make the non-copyable callback copyable, we wrap it inside a shared pointer instead.
         std::get<3>(get_result)->add_callback(
-            [callback=std::allocate_shared<std::decay_t<CompletionCallback>>(this->get_allocator(), std::forward<CompletionCallback>(callback))](const mapped_type& mapped_value, const error_type& error_value) mutable {
+            [callback=std::allocate_shared<std::decay_t<CompletionCallback>>(this->get_allocator(), std::forward<CompletionCallback>(callback))](const mapped_type& mapped_value, const error_type& error_value) {
               std::invoke(std::forward<CompletionCallback>(*callback), mapped_value, error_value, std::false_type());
             });
       }

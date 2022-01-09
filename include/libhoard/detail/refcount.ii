@@ -145,7 +145,7 @@ inline auto refcount_ptr<T, Allocator>::operator=(refcount_ptr&& y) noexcept(std
 }
 
 template<typename T, typename Allocator>
-inline auto refcount_ptr<T, Allocator>::operator=(std::nullptr_t y) noexcept -> refcount_ptr& {
+inline auto refcount_ptr<T, Allocator>::operator=([[maybe_unused]] std::nullptr_t y) noexcept -> refcount_ptr& {
   reset();
   return *this;
 }

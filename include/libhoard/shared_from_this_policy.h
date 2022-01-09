@@ -16,7 +16,7 @@ class shared_from_this_policy {
   {
     public:
     template<typename... Args>
-    table_base(const std::tuple<Args...>& args, const Allocator& alloc) {}
+    table_base([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc) {}
   };
 };
 

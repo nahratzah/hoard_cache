@@ -33,11 +33,11 @@ SUITE(resolver_policy) {
 
   TEST_FIXTURE(fixture, get) {
     auto three = hashtable->get(3);
-    CHECK_EQUAL(1, three.index());
+    CHECK_EQUAL(1u, three.index());
     CHECK_EQUAL(std::string("xxx"), std::get<1>(three));
 
     auto four = hashtable->get(4);
-    CHECK_EQUAL(1, four.index());
+    CHECK_EQUAL(1u, four.index());
     CHECK_EQUAL(std::string("xxxx"), std::get<1>(four));
   }
 

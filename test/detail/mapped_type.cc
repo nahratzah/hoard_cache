@@ -333,7 +333,7 @@ SUITE(mapped_value) {
     value->mark_expired();
 
     auto result = value->get_if_matching(
-        [&matcher_invocation_count](const std::string& v) -> bool {
+        [&matcher_invocation_count]([[maybe_unused]] const std::string& v) -> bool {
           ++matcher_invocation_count;
           return true;
         });
@@ -347,7 +347,7 @@ SUITE(mapped_value) {
     init_test(std::piecewise_construct, std::make_error_code(std::errc::connection_aborted));
 
     auto result = value->get_if_matching(
-        [&matcher_invocation_count](const std::string& v) -> bool {
+        [&matcher_invocation_count]([[maybe_unused]] const std::string& v) -> bool {
           ++matcher_invocation_count;
           return true;
         });
@@ -694,7 +694,7 @@ SUITE(mapped_pointer) {
     value->mark_expired();
 
     auto result = value->get_if_matching(
-        [&matcher_invocation_count, this](const std::shared_ptr<std::string>& v) -> bool {
+        [&matcher_invocation_count]([[maybe_unused]] const std::shared_ptr<std::string>& v) -> bool {
           ++matcher_invocation_count;
           return true;
         });
@@ -708,7 +708,7 @@ SUITE(mapped_pointer) {
     init_test(std::piecewise_construct, std::make_error_code(std::errc::connection_aborted));
 
     auto result = value->get_if_matching(
-        [&matcher_invocation_count, this](const std::shared_ptr<std::string>& v) -> bool {
+        [&matcher_invocation_count]([[maybe_unused]] const std::shared_ptr<std::string>& v) -> bool {
           ++matcher_invocation_count;
           return true;
         });

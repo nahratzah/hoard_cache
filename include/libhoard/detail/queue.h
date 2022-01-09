@@ -21,7 +21,7 @@ class basic_queue {
 
     protected:
     template<typename HashTable>
-    explicit value_base(const HashTable& table) noexcept
+    explicit value_base([[maybe_unused]] const HashTable& table) noexcept
     {}
 
     value_base(const value_base&) = default;

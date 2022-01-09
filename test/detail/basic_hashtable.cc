@@ -116,7 +116,7 @@ SUITE(basic_hashtable_algorithms) {
 
     const auto rehash_result_1 = hashtable->rehash_(&buckets_1[0], buckets_1.size());
     CHECK_EQUAL(std::get<0>(rehash_result_1), nullptr);
-    CHECK_EQUAL(std::get<1>(rehash_result_1), 0);
+    CHECK_EQUAL(std::get<1>(rehash_result_1), 0u);
     CHECK_EQUAL(buckets_1.size(), hashtable->bucket_count());
 
     const auto rehash_result_2 = hashtable->rehash_(&buckets_2[0], buckets_2.size());
@@ -347,11 +347,11 @@ SUITE(basic_hashtable) {
   TEST_FIXTURE(basic_hashtable_fixture, reserve) {
     test_init(1.0f);
     hashtable->reserve(1000);
-    CHECK_EQUAL(1000, hashtable->bucket_count());
+    CHECK_EQUAL(1000u, hashtable->bucket_count());
 
     test_init(0.5f);
     hashtable->reserve(1000);
-    CHECK_EQUAL(2000, hashtable->bucket_count());
+    CHECK_EQUAL(2000u, hashtable->bucket_count());
   }
 
   TEST_FIXTURE(basic_hashtable_fixture, link) {

@@ -88,7 +88,7 @@ SUITE(pending) {
   TEST_FIXTURE(pending_fixture, cancel) {
     init_test();
     int count_callback_called = 0;
-    pending->add_callback([&count_callback_called](const std::string& v, std::error_code ex) {
+    pending->add_callback([&count_callback_called]([[maybe_unused]] const std::string& v, [[maybe_unused]] std::error_code ex) {
           ++count_callback_called;
         });
 
@@ -103,7 +103,7 @@ SUITE(pending) {
   TEST_FIXTURE(pending_fixture, canceled_pending_does_not_call_success_callbacks) {
     init_test();
     int count_callback_called = 0;
-    pending->add_callback([&count_callback_called](const std::string& v, std::error_code ex) {
+    pending->add_callback([&count_callback_called]([[maybe_unused]] const std::string& v, [[maybe_unused]] std::error_code ex) {
           ++count_callback_called;
         });
 
@@ -116,7 +116,7 @@ SUITE(pending) {
   TEST_FIXTURE(pending_fixture, canceled_pending_does_not_call_failure_callbacks) {
     init_test();
     int count_callback_called = 0;
-    pending->add_callback([&count_callback_called](const std::string& v, std::error_code ex) {
+    pending->add_callback([&count_callback_called]([[maybe_unused]] const std::string& v, [[maybe_unused]] std::error_code ex) {
           ++count_callback_called;
         });
 

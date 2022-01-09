@@ -92,7 +92,7 @@ SUITE(hashtable) {
     init_test(std::tuple<>());
 
     auto get_result = hashtable->get_if_exists("key");
-    CHECK_EQUAL(0, get_result.index());
+    CHECK_EQUAL(0u, get_result.index());
   }
 
   TEST_FIXTURE(hashtable_fixture, get_if_present_finds_a_value) {

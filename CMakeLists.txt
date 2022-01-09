@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.3)
 project(libhoard)
 
+include(CheckCXXCompilerFlag)
+
 set(LIBHOARD_VERSION_MAJOR 0 CACHE STRING "major version" FORCE)
 set(LIBHOARD_VERSION_MINOR 0 CACHE STRING "minor version" FORCE)
 set(LIBHOARD_VERSION ${MONSOON_CACHE_VERSION_MAJOR}.${MONSOON_CACHE_VERSION_MINOR} CACHE STRING "version" FORCE)
@@ -10,6 +12,15 @@ if (UNIX AND
     CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND
     CMAKE_GENERATOR STREQUAL "Ninja")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+endif()
+
+check_cxx_compiler_flag(-Wall cxx_wall_flag)
+if (cxx_wall_flag)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
+endif()
+check_cxx_compiler_flag(-Wextra cxx_wextra_flag)
+if (cxx_wextra_flag)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wextra")
 endif()
 
 enable_testing()

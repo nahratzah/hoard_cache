@@ -12,7 +12,7 @@ inline max_age_policy<Clock>::max_age_policy(std::chrono::milliseconds max_age)
 template<typename Clock>
 template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Args>
-inline max_age_policy<Clock>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, const Allocator& alloc) noexcept
+inline max_age_policy<Clock>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc) noexcept
 : max_age_(std::get<max_age_policy>(args).max_age)
 {}
 

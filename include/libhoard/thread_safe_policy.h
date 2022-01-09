@@ -27,7 +27,7 @@ class thread_safe_policy {
     auto unlock() -> void;
 
     private:
-    std::mutex mtx_;
+    std::recursive_mutex mtx_;
   };
 
   public:

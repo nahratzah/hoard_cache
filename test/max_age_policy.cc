@@ -50,10 +50,10 @@ SUITE(max_age_policy) {
 
     // After 10s, the value is no longer valid.
     test_clock::set_time(10s);
-    CHECK_EQUAL(/* expired */ 0, table->get(3).index());
+    CHECK_EQUAL(/* expired */ 0u, table->get(3).index());
 
     // After 11s, the value is (still) no longer valid.
     test_clock::set_time(11s);
-    CHECK_EQUAL(/* expired */ 0, table->get(3).index());
+    CHECK_EQUAL(/* expired */ 0u, table->get(3).index());
   }
 }

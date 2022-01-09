@@ -154,7 +154,7 @@ class init_fn {
 
 template<typename T>
 template<typename HashTable>
-inline hashtable_dfl_constructible_<T>::hashtable_dfl_constructible_(const HashTable& ht)
+inline hashtable_dfl_constructible_<T>::hashtable_dfl_constructible_([[maybe_unused]] const HashTable& ht)
 {}
 
 
@@ -446,11 +446,6 @@ inline auto hashtable<KeyType, T, Error, Policies...>::get_(std::size_t hash, fu
     IncludePending,
     std::variant<std::monostate, mapped_type, error_type, pending_type*>,
     std::variant<std::monostate, mapped_type, error_type>> {
-  using return_type = std::conditional_t<
-      IncludePending,
-      std::variant<std::monostate, mapped_type, error_type, pending_type*>,
-      std::variant<std::monostate, mapped_type, error_type>>;
-
   const auto bucket_idx = this->bucket_for(hash);
   auto before_i = typename helper_type::iterator(this->bht::before_begin(bucket_idx)),
        before_e = typename helper_type::iterator(this->bht::before_end(bucket_idx));
@@ -643,7 +638,7 @@ inline auto hashtable<KeyType, T, Error, Policies...>::allocate_value_type(Args&
 
 template<typename KeyType, typename T, typename Error, typename... Policies>
 inline auto hashtable<KeyType, T, Error, Policies...>::link(std::size_t hash, value_pointer vptr) -> void {
-  const auto before_inserted_iter = this->bht::link(hash, vptr.get(), [this]() { this->unlink_expired_elements_(); }); // may throw
+  this->bht::link(hash, vptr.get(), [this]() { this->unlink_expired_elements_(); }); // may throw
   this->on_create_(vptr.get()); // never throws
   if (!vptr->pending()) this->on_assign_(vptr.get(), vptr->holds_value(), false); // never throws
   vptr.release(); // never throws
@@ -700,11 +695,15 @@ template<typename KeyType, typename T, typename Error, typename... Policies>
 template<typename... KeyArgs, typename... MappedArgs>
 inline auto hashtable<KeyType, T, Error, Policies...>::emplace(std::piecewise_construct_t pc, std::tuple<KeyArgs...> key_args, std::tuple<MappedArgs...> mapped_args) -> void {
   const auto hash = std::apply(this->hash, key_args);
-  std::apply(
-      [this, hash](const auto&... key_args) {
-        this->expire(key_args...);
-      },
-      key_args);
+  expire_(
+      hash,
+      [this, &key_args](const key_type& ht_key) -> bool {
+        return std::apply(
+            [this, &ht_key](const auto&... keys) {
+              return std::invoke(this->equal, ht_key, keys...);
+            },
+            key_args);
+      });
   link(hash, allocate_value_type(pc, std::move(key_args), std::move(mapped_args)));
 
   maintenance_();

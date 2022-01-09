@@ -22,7 +22,7 @@ SUITE(refcount) {
         REQUIRE CHECK(self != nullptr); // If nullpointer, we're not meant to allocate.
 
         ++self->allocate_called;
-        CHECK_EQUAL(1, allocate_count);
+        CHECK_EQUAL(1u, allocate_count);
         return &self->instance;
       }
 
@@ -30,7 +30,7 @@ SUITE(refcount) {
         REQUIRE CHECK(self != nullptr); // If nullpointer, we're not meant to allocate.
 
         ++self->deallocate_called;
-        CHECK_EQUAL(1, deallocate_count);
+        CHECK_EQUAL(1u, deallocate_count);
         CHECK_EQUAL(&self->instance, deallocate_pointer);
       }
 

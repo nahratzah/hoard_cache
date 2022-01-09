@@ -123,7 +123,7 @@ struct type_list_exclude_<type_list<Types...>, type_list<T0, Ts...>, U...>
 
 template<typename Functor, typename T, typename = void>
 struct apply_for_each_type_invoker_ {
-  auto invoke(Functor& functor) const noexcept -> void {}
+  auto invoke([[maybe_unused]] const Functor& functor) const noexcept -> void {}
 };
 
 template<typename Functor, typename T>

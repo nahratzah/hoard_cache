@@ -18,13 +18,13 @@ class hash {
     private:
     template<typename... Args, typename Alloc>
     table_base_impl(const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc,
-        std::true_type has_hash) noexcept
+        [[maybe_unused]] std::true_type has_hash) noexcept
     : hash(std::get<Hash>(args))
     {}
 
     template<typename... Args, typename Alloc>
     table_base_impl([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc,
-        std::false_type has_hash) noexcept
+        [[maybe_unused]] std::false_type has_hash) noexcept
     : hash()
     {}
 

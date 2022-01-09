@@ -19,7 +19,7 @@ inline resolver_policy<Functor>::resolver_policy(Functor resolver)
 template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Args>
-inline resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, const Allocator& alloc)
+inline resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc)
 : resolver_(std::get<resolver_policy>(args).resolver_)
 {}
 
@@ -27,7 +27,10 @@ template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Keys>
 inline auto resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator> {
-  return static_cast<HashTable*>(this)->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...), std::invoke(resolver_, keys...));
+  auto self = static_cast<HashTable*>(this);
+  auto new_value = self->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...), std::invoke(resolver_, keys...));
+  self->link(hash, new_value);
+  return new_value;
 }
 
 
@@ -46,7 +49,7 @@ inline auto async_resolver_policy<Functor>::on_assign_(HashTable& hashtable, Val
 template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Args>
-inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, const Allocator& alloc)
+inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc)
 : resolver_(std::get<async_resolver_policy>(args).resolver_)
 {}
 

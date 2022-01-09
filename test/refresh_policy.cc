@@ -1,15 +1,23 @@
 #include <libhoard/refresh_policy.h>
 
 #include <chrono>
-#include <chrono>
-#include <system_error>
-#include <tuple>
 #include <list>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <thread>
+#include <tuple>
 
 #include "UnitTest++/UnitTest++.h"
 
 #include <libhoard/resolver_policy.h>
 #include <libhoard/detail/hashtable.h>
+
+/*
+ * Unfortunately, we have to use the system-clock here, instead of the test_clock.
+ * This is because the test-clock cannot be run with the timed-wait of the
+ * condition-variable that powers the refresh thread.
+ */
 
 SUITE(refresh_policy) {
   class fixture {

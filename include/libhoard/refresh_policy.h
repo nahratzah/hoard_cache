@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -10,6 +11,32 @@
 #include "detail/linked_list.h"
 #include "detail/meta.h"
 #include "detail/refcount.h"
+
+namespace libhoard::detail {
+namespace {
+
+
+template<typename ValueType>
+class on_refresh_event_fn {
+  public:
+  on_refresh_event_fn(ValueType* new_value, const ValueType* old_value) noexcept
+  : new_value(new_value),
+    old_value(old_value)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T*>()->on_refresh(std::declval<const ValueType*>())) {
+    return new_value->T::on_refresh(old_value);
+  }
+
+  private:
+  ValueType* new_value;
+  const ValueType* old_value;
+};
+
+
+} /* namespace libhoard::detail::<unnamed> */
+} /* namespace libhoard::detail */
 
 namespace libhoard {
 
@@ -27,6 +54,13 @@ class refresh_impl_policy {
   public:
   class value_base;
   template<typename HashTable, typename ValueType, typename Allocator> class table_base;
+
+  private:
+  template<typename ValueType>
+  static auto on_refresh_event(ValueType* new_value, const ValueType* old_value) {
+    typename ValueType::base_types::template apply_t<detail::maybe_apply_for_each_type> functors;
+    functors(detail::on_refresh_event_fn(new_value, old_value));
+  };
 };
 
 class refresh_impl_policy::value_base {
@@ -69,10 +103,12 @@ class refresh_impl_policy::table_base {
     {
       if (typename ValueType::pending_type* pending = lookup_ptr->get_pending()) {
         pending->add_callback(
-            [value_ptr]([[maybe_unused]] const auto& value, [[maybe_unused]] const auto& ex) {
+            [lookup_ptr=lookup_ptr.get(), value_ptr]([[maybe_unused]] const auto& value, [[maybe_unused]] const auto& ex) {
+              on_refresh_event(lookup_ptr, value_ptr.get());
               value_ptr->mark_expired();
             });
       } else {
+        on_refresh_event(lookup_ptr.get(), value_ptr.get());
         value_ptr->mark_expired();
       }
     }
@@ -121,6 +157,10 @@ class refresh_policy<Clock>::value_base
     return Clock::now() >= cancel_tp;
   }
 
+  auto on_refresh(const value_base* old_value) noexcept -> void {
+    cancel_tp = std::min(cancel_tp, old_value->cancel_tp);
+  }
+
   private:
   typename Clock::time_point refresh_tp;
   typename Clock::time_point cancel_tp = Clock::time_point::max();
@@ -141,11 +181,17 @@ class refresh_policy<Clock>::table_base {
       vptr->refresh_policy::value_base::refresh_tp = Clock::now() + delay;
       delay_queue.link_back(vptr);
       delay_queue_changed.notify_one();
+
+      if (idle_timer != Clock::duration::zero()) {
+        vptr->refresh_policy::value_base::cancel_tp = std::min(
+            vptr->refresh_policy::value_base::cancel_tp,
+            Clock::now() + idle_timer);
+      }
     }
   }
 
   auto on_hit_(ValueType* vptr) noexcept -> void {
-    if (idle_timer != Clock::duration::zero())
+    if (idle_timer != Clock::duration::zero() && vptr->holds_value())
       vptr->cancel_tp = Clock::now() + idle_timer;
   }
 

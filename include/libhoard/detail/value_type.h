@@ -10,6 +10,7 @@
 
 #include "function_ref.h"
 #include "identity.h"
+#include "meta.h"
 
 namespace libhoard::detail {
 
@@ -28,6 +29,7 @@ class value_type
   using allocator_type = typename mapper::allocator_type;
   using pending_type = typename mapper::pending_type;
   using callback_fn = typename mapper::callback_fn;
+  using base_types = type_list<BaseTypes...>;
 
   private:
   const key_type key_;
@@ -94,6 +96,7 @@ class value_type<identity_t, Mapper, BaseTypes...>
   using allocator_type = typename mapper::allocator_type;
   using pending_type = typename mapper::pending_type;
   using callback_fn = typename mapper::callback_fn;
+  using base_types = type_list<BaseTypes...>;
 
   private:
   mapper mapped_;

@@ -88,7 +88,6 @@ class async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator
   const std::weak_ptr<HashTable> weak_self;
   detail::refcount_ptr<ValueType, Allocator> value;
   bool called = false;
-  bool live = false;
 };
 
 

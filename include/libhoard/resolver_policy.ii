@@ -66,7 +66,6 @@ inline auto async_resolver_policy<Functor>::table_base<HashTable, ValueType, All
   resolver_(callback_ptr, keys...);
 
   self->link(hash, new_value);
-  callback_ptr->live = true;
   return new_value;
 }
 
@@ -81,7 +80,7 @@ inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocato
 template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
 inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::callback::~callback() {
-  if (live) cancel();
+  cancel();
 }
 
 template<typename Functor>

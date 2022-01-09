@@ -90,6 +90,7 @@ class refcount_ptr {
   auto operator->() const noexcept -> element_type*;
   auto release() noexcept -> element_type*;
   auto reset() -> void;
+  auto reset(element_type* ptr) -> void;
   explicit operator bool() const noexcept;
 
   auto operator==(std::nullptr_t nil) const noexcept -> bool;

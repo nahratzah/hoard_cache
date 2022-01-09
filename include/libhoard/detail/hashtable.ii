@@ -148,6 +148,22 @@ class init_fn {
   SelfType* self;
 };
 
+template<typename SelfType>
+class destroy_fn {
+  public:
+  explicit destroy_fn(SelfType* self) noexcept
+  : self(self)
+  {}
+
+  template<typename T>
+  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().destroy()) {
+    return self->T::destroy();
+  }
+
+  private:
+  SelfType* self;
+};
+
 
 } /* namespace libhoard::detail::<unnamed> */
 
@@ -165,7 +181,9 @@ inline hashtable_policy_container<ValueType, BaseTypes...>::hashtable_policy_con
 {}
 
 template<typename ValueType, typename... BaseTypes>
-inline hashtable_policy_container<ValueType, BaseTypes...>::~hashtable_policy_container() noexcept = default;
+inline hashtable_policy_container<ValueType, BaseTypes...>::~hashtable_policy_container() noexcept {
+  this->destroy();
+}
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_create_(ValueType* vptr) noexcept -> void {
@@ -208,6 +226,11 @@ inline auto hashtable_policy_container<ValueType, BaseTypes...>::policy_removal_
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::init() -> void {
   base_invoke_(init_fn<hashtable_policy_container>(this));
+}
+
+template<typename ValueType, typename... BaseTypes>
+inline auto hashtable_policy_container<ValueType, BaseTypes...>::destroy() -> void {
+  base_invoke_(destroy_fn<hashtable_policy_container>(this));
 }
 
 template<typename ValueType, typename... BaseTypes>
@@ -392,7 +415,9 @@ inline hashtable<KeyType, T, Error, Policies...>::hashtable(const std::tuple<Arg
 : basic_hashtable_allocator_member<allocator_type>(allocator),
   bht(allocator),
   hashtable_helper_<KeyType, T, Error, Policies...>::ht_base(args, allocator)
-{}
+{
+  this->init();
+}
 
 template<typename KeyType, typename T, typename Error, typename... Policies>
 template<typename... Args>
@@ -400,7 +425,9 @@ inline hashtable<KeyType, T, Error, Policies...>::hashtable(const std::tuple<Arg
 : basic_hashtable_allocator_member<allocator_type>(allocator),
   bht(max_load_factor, allocator),
   hashtable_helper_<KeyType, T, Error, Policies...>::ht_base(args, allocator)
-{}
+{
+  this->init();
+}
 
 template<typename KeyType, typename T, typename Error, typename... Policies>
 inline hashtable<KeyType, T, Error, Policies...>::~hashtable() {
@@ -535,12 +562,7 @@ inline auto hashtable<KeyType, T, Error, Policies...>::async_get(CompletionCallb
       std::true_type());
 
   // Invoke the resolver if value wasn't found.
-  if constexpr(helper_type::has_async_resolver_policy) {
-    if (get_result.index() == 0) {
-      new_value_ptr = this->async_resolve(hash, keys...);
-      get_result = new_value_ptr->get(std::true_type());
-    }
-  } else if constexpr(helper_type::has_resolver_policy) {
+  if constexpr(helper_type::has_async_resolver_policy || helper_type::has_resolver_policy) {
     if (get_result.index() == 0) {
       new_value_ptr = this->resolve(hash, keys...);
       get_result = new_value_ptr->get(std::true_type());

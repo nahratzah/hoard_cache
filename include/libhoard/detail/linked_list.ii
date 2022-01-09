@@ -28,6 +28,10 @@ inline constexpr basic_linked_list::link::link(link* pred, link* succ) noexcept
   pred_(pred)
 {}
 
+inline auto basic_linked_list::link::is_linked() const noexcept -> bool {
+  return succ_ != nullptr;
+}
+
 
 inline basic_linked_list::basic_linked_list() noexcept
 : head_(&head_, &head_)
@@ -230,210 +234,214 @@ inline auto basic_linked_list::const_iterator::operator!=(const const_iterator& 
 }
 
 
-template<typename T>
-inline auto linked_list<T>::link_front(value_type* elem) noexcept -> iterator {
-  return iterator(impl_.link_front(elem));
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::link_front(value_type* elem) noexcept -> iterator {
+  linked_list_link<Tag>*const link = elem;
+  return iterator(impl_.link_front(link));
 }
 
-template<typename T>
-inline auto linked_list<T>::link_back(value_type* elem) noexcept -> iterator {
-  return iterator(impl_.link_back(elem));
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::link_back(value_type* elem) noexcept -> iterator {
+  linked_list_link<Tag>*const link = elem;
+  return iterator(impl_.link_back(link));
 }
 
-template<typename T>
-inline auto linked_list<T>::link_before(const_iterator pos, value_type* elem) noexcept -> iterator {
-  return iterator(impl_.link_before(pos.iter_, elem));
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::link_before(const_iterator pos, value_type* elem) noexcept -> iterator {
+  linked_list_link<Tag>*const link = elem;
+  return iterator(impl_.link_before(pos.iter_, link));
 }
 
-template<typename T>
-inline auto linked_list<T>::link_after(const_iterator pos, value_type* elem) noexcept -> iterator {
-  return iterator(impl_.link_after(pos.iter_, elem));
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::link_after(const_iterator pos, value_type* elem) noexcept -> iterator {
+  linked_list_link<Tag>*const link = elem;
+  return iterator(impl_.link_after(pos.iter_, link));
 }
 
-template<typename T>
-inline auto linked_list<T>::unlink(const_iterator iter) noexcept -> iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::unlink(const_iterator iter) noexcept -> iterator {
   return iterator(impl_.unlink(iter.iter_));
 }
 
-template<typename T>
-inline auto linked_list<T>::begin() noexcept -> iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::begin() noexcept -> iterator {
   return iterator(impl_.begin());
 }
 
-template<typename T>
-inline auto linked_list<T>::end() noexcept -> iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::end() noexcept -> iterator {
   return iterator(impl_.end());
 }
 
-template<typename T>
-inline auto linked_list<T>::begin() const noexcept -> const_iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::begin() const noexcept -> const_iterator {
   return const_iterator(impl_.begin());
 }
 
-template<typename T>
-inline auto linked_list<T>::end() const noexcept -> const_iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::end() const noexcept -> const_iterator {
   return const_iterator(impl_.end());
 }
 
-template<typename T>
-inline auto linked_list<T>::cbegin() const noexcept -> const_iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::cbegin() const noexcept -> const_iterator {
   return const_iterator(impl_.begin());
 }
 
-template<typename T>
-inline auto linked_list<T>::cend() const noexcept -> const_iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::cend() const noexcept -> const_iterator {
   return const_iterator(impl_.end());
 }
 
-template<typename T>
-inline auto linked_list<T>::empty() const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::empty() const noexcept -> bool {
   return impl_.empty();
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator_to(value_type* v) noexcept -> iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator_to(value_type* v) noexcept -> iterator {
   return iterator(basic_linked_list::iterator_to(v));
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator_to(const value_type* v) noexcept -> const_iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator_to(const value_type* v) noexcept -> const_iterator {
   return const_iterator(basic_linked_list::iterator_to(v));
 }
 
 
-template<typename T>
-inline linked_list<T>::iterator::iterator() noexcept = default;
+template<typename T, typename Tag>
+inline linked_list<T, Tag>::iterator::iterator() noexcept = default;
 
-template<typename T>
-inline linked_list<T>::iterator::iterator(basic_linked_list::iterator iter) noexcept
+template<typename T, typename Tag>
+inline linked_list<T, Tag>::iterator::iterator(basic_linked_list::iterator iter) noexcept
 : iter_(std::move(iter))
 {}
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator++() noexcept -> iterator& {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator++() noexcept -> iterator& {
   ++iter_;
   return *this;
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator++(int) noexcept -> iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator++(int) noexcept -> iterator {
   return iterator(iter_++);
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator--() noexcept -> iterator& {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator--() noexcept -> iterator& {
   --iter_;
   return *this;
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator--(int) noexcept -> iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator--(int) noexcept -> iterator {
   return iterator(iter_--);
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::get() const noexcept -> T* {
-  return static_cast<T*>(iter_.get());
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::get() const noexcept -> T* {
+  return static_cast<T*>(static_cast<linked_list_link<Tag>*>(iter_.get()));
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator*() const noexcept -> T& {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator*() const noexcept -> T& {
   return *get();
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator->() const noexcept -> T* {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator->() const noexcept -> T* {
   return get();
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator==(const iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator==(const iterator& y) const noexcept -> bool {
   return iter_ == y.iter_;
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator!=(const iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator!=(const iterator& y) const noexcept -> bool {
   return iter_ != y.iter_;
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator==(const const_iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator==(const const_iterator& y) const noexcept -> bool {
   return iter_ == y.iter_;
 }
 
-template<typename T>
-inline auto linked_list<T>::iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::iterator::operator!=(const const_iterator& y) const noexcept -> bool {
   return iter_ != y.iter_;
 }
 
 
-template<typename T>
-inline linked_list<T>::const_iterator::const_iterator() noexcept = default;
+template<typename T, typename Tag>
+inline linked_list<T, Tag>::const_iterator::const_iterator() noexcept = default;
 
-template<typename T>
-inline linked_list<T>::const_iterator::const_iterator(const iterator& y) noexcept
+template<typename T, typename Tag>
+inline linked_list<T, Tag>::const_iterator::const_iterator(const iterator& y) noexcept
 : iter_(y.iter_)
 {}
 
-template<typename T>
-inline linked_list<T>::const_iterator::const_iterator(basic_linked_list::const_iterator iter) noexcept
+template<typename T, typename Tag>
+inline linked_list<T, Tag>::const_iterator::const_iterator(basic_linked_list::const_iterator iter) noexcept
 : iter_(std::move(iter))
 {}
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator++() noexcept -> const_iterator& {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator++() noexcept -> const_iterator& {
   ++iter_;
   return *this;
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator++(int) noexcept -> const_iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator++(int) noexcept -> const_iterator {
   return iterator(iter_++);
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator--() noexcept -> const_iterator& {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator--() noexcept -> const_iterator& {
   --iter_;
   return *this;
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator--(int) noexcept -> const_iterator {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator--(int) noexcept -> const_iterator {
   return iterator(iter_--);
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::get() const noexcept -> const T* {
-  return static_cast<const T*>(iter_.get());
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::get() const noexcept -> const T* {
+  return static_cast<const T*>(static_cast<const linked_list_link<Tag>*>(iter_.get()));
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator*() const noexcept -> const T& {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator*() const noexcept -> const T& {
   return *get();
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator->() const noexcept -> const T* {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator->() const noexcept -> const T* {
   return get();
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator==(const iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator==(const iterator& y) const noexcept -> bool {
   return iter_ == y.iter_;
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator!=(const iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator!=(const iterator& y) const noexcept -> bool {
   return iter_ != y.iter_;
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator==(const const_iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator==(const const_iterator& y) const noexcept -> bool {
   return iter_ == y.iter_;
 }
 
-template<typename T>
-inline auto linked_list<T>::const_iterator::operator!=(const const_iterator& y) const noexcept -> bool {
+template<typename T, typename Tag>
+inline auto linked_list<T, Tag>::const_iterator::operator!=(const const_iterator& y) const noexcept -> bool {
   return iter_ != y.iter_;
 }
 

@@ -90,8 +90,8 @@ inline auto mapped_value<T, Allocator, ErrorType>::pending() const noexcept -> b
 
 template<typename T, typename Allocator, typename ErrorType>
 inline auto mapped_value<T, Allocator, ErrorType>::cancel() noexcept -> void {
-  auto pending_ptr = std::get_if<0>(&value_);
-  if (pending_ptr) pending_ptr->cancel();
+  if (auto pending_ptr = std::get_if<0>(&value_))
+    pending_ptr->cancel();
 }
 
 template<typename T, typename Allocator, typename ErrorType>
@@ -314,8 +314,8 @@ inline auto mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPoi
 
 template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer>
 inline auto mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer>::cancel() noexcept -> void {
-  auto pending_ptr = std::get_if<0>(&value_);
-  if (pending_ptr) pending_ptr->cancel();
+  if (auto pending_ptr = std::get_if<0>(&value_))
+    pending_ptr->cancel();
 }
 
 template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer>

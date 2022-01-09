@@ -60,17 +60,17 @@ inline auto basic_queue::on_unlink_(value_base* v) noexcept -> void {
 }
 
 inline auto basic_queue::invariant() const noexcept -> bool {
-  const auto hot_count = std::distance<linked_list<value_base>::const_iterator>(q_.begin(), midpoint_);
-  const auto cold_count = std::distance<linked_list<value_base>::const_iterator>(midpoint_, q_.end());
+  const auto hot_count = std::distance<linked_list<value_base, basic_queue>::const_iterator>(q_.begin(), midpoint_);
+  const auto cold_count = std::distance<linked_list<value_base, basic_queue>::const_iterator>(midpoint_, q_.end());
   const auto count = hot_count + cold_count;
 
   // Everything preceding midpoint is hot.
-  const bool invariant_1 = std::all_of(q_.begin(), linked_list<value_base>::const_iterator(midpoint_),
+  const bool invariant_1 = std::all_of(q_.begin(), linked_list<value_base, basic_queue>::const_iterator(midpoint_),
       [](const value_base& v) noexcept -> bool {
         return v.hot_;
       });
   // Everything from midpoint onward is cold.
-  const bool invariant_2 = std::none_of(linked_list<value_base>::const_iterator(midpoint_), q_.end(),
+  const bool invariant_2 = std::none_of(linked_list<value_base, basic_queue>::const_iterator(midpoint_), q_.end(),
       [](const value_base& v) noexcept -> bool {
         return v.hot_;
       });

@@ -14,7 +14,7 @@ class basic_queue {
 
   public:
   class value_base
-  : public basic_linked_list::link
+  : public linked_list_link<basic_queue>
   {
     friend basic_queue;
     template<typename HashTable, typename ValueType> friend class queue;
@@ -72,8 +72,8 @@ class basic_queue {
   auto invariant() const noexcept -> bool;
 
   private:
-  linked_list<value_base> q_;
-  linked_list<value_base>::iterator midpoint_ = q_.begin();
+  linked_list<value_base, basic_queue> q_;
+  linked_list<value_base, basic_queue>::iterator midpoint_ = q_.begin();
   bool odd_sized_ = false;
 };
 

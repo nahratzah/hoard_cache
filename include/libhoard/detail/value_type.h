@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -72,6 +73,7 @@ class value_type
   auto holds_value() const noexcept -> bool;
   auto holds_error() const noexcept -> bool;
   auto get_pending() noexcept -> pending_type*;
+  auto key() const -> std::optional<key_type>;
 
   template<typename... Args>
   auto assign(Args&&... args) noexcept(noexcept(std::declval<mapper&>().assign(std::declval<Args>()...))) -> void;
@@ -120,6 +122,7 @@ class value_type<identity_t, Mapper, BaseTypes...>
   auto holds_value() const noexcept -> bool;
   auto holds_error() const noexcept -> bool;
   auto get_pending() noexcept -> pending_type*;
+  auto key() const -> std::optional<key_type>;
 };
 
 

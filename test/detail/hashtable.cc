@@ -14,7 +14,6 @@ class hashtable_fixture {
   template<typename... Args>
   auto init_test(Args&&... args) -> void {
     hashtable = std::make_shared<hashtable_type>(std::forward<Args>(args)...);
-    hashtable->init();
   }
 
   std::shared_ptr<hashtable_type> hashtable;

@@ -22,8 +22,12 @@ class basic_linked_list {
     private:
     constexpr link(link* pred, link* succ) noexcept;
 
-    link* succ_;
-    link* pred_;
+    public:
+    auto is_linked() const noexcept -> bool;
+
+    private:
+    link* succ_ = nullptr;
+    link* pred_ = nullptr;
   };
 
   class iterator;
@@ -130,7 +134,21 @@ class basic_linked_list::const_iterator {
 };
 
 
-template<typename T>
+template<typename Tag>
+class linked_list_link
+: public basic_linked_list::link
+{
+  protected:
+  linked_list_link() noexcept = default;
+  linked_list_link(const linked_list_link& y) noexcept = default;
+  linked_list_link(linked_list_link&& y) noexcept = default;
+  ~linked_list_link() noexcept = default;
+  auto operator=(const linked_list_link& y) noexcept -> linked_list_link& = default;
+  auto operator=(linked_list_link&& y) noexcept -> linked_list_link& = default;
+};
+
+
+template<typename T, typename Tag>
 class linked_list {
   public:
   using value_type = T;
@@ -159,8 +177,8 @@ class linked_list {
 };
 
 
-template<typename T>
-class linked_list<T>::iterator {
+template<typename T, typename Tag>
+class linked_list<T, Tag>::iterator {
   friend linked_list;
   friend const_iterator;
 
@@ -196,8 +214,8 @@ class linked_list<T>::iterator {
 };
 
 
-template<typename T>
-class linked_list<T>::const_iterator {
+template<typename T, typename Tag>
+class linked_list<T, Tag>::const_iterator {
   friend linked_list;
   friend iterator;
 

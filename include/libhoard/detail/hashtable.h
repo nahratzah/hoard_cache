@@ -200,6 +200,8 @@ class hashtable_policy_container
   public:
   ///\brief Initialization function.
   auto init() -> void;
+  ///\brief Pre-destroy function.
+  auto destroy() -> void;
 
   private:
   ///\brief Assign \p fn for each base type where it is invocable.

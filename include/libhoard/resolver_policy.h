@@ -64,7 +64,7 @@ class async_resolver_policy<Functor>::table_base {
   table_base(const std::tuple<Args...>& args, const Allocator& alloc);
 
   template<typename... Keys>
-  auto async_resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator>;
+  auto resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator>;
 
   const Functor resolver_;
 };

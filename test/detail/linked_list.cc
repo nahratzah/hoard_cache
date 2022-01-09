@@ -7,26 +7,28 @@
 
 using libhoard::detail::linked_list;
 
-class linked_list_fixture {
-  public:
-  class element
-  : public libhoard::detail::basic_linked_list::link
-  {};
+SUITE(linked_list) {
+  class linked_list_fixture {
+    public:
+    struct tag;
 
-  using list_type = linked_list<element>;
+    class element
+    : public libhoard::detail::linked_list_link<tag>
+    {};
 
-  struct is_same_address {
-    template<typename T, typename U>
-    auto operator()(const T& t, const U& u) const noexcept -> bool {
-      return std::addressof(t) == std::addressof(u);
-    }
+    using list_type = linked_list<element, tag>;
+
+    struct is_same_address {
+      template<typename T, typename U>
+      auto operator()(const T& t, const U& u) const noexcept -> bool {
+        return std::addressof(t) == std::addressof(u);
+      }
+    };
+
+    protected:
+    list_type list;
   };
 
-  protected:
-  list_type list;
-};
-
-SUITE(linked_list) {
   TEST_FIXTURE(linked_list_fixture, empty_list) {
     CHECK(list.empty());
     CHECK(list.begin() == list.end());

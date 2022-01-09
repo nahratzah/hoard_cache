@@ -94,6 +94,16 @@ inline auto value_type<KeyType, Mapper, BaseTypes...>::matches(function_ref<bool
 }
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::get(std::false_type include_pending) const -> std::variant<std::monostate, mapped_type, error_type> {
+  return mapped_.get(include_pending);
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
+inline auto value_type<KeyType, Mapper, BaseTypes...>::get(std::true_type include_pending) -> std::variant<std::monostate, mapped_type, error_type, pending_type*> {
+  return mapped_.get(include_pending);
+}
+
+template<typename KeyType, typename Mapper, typename... BaseTypes>
 inline auto value_type<KeyType, Mapper, BaseTypes...>::pending() const noexcept -> bool {
   return mapped_.pending();
 }
@@ -143,13 +153,8 @@ inline auto value_type<KeyType, Mapper, BaseTypes...>::get_pending() noexcept ->
 }
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
-inline auto value_type<KeyType, Mapper, BaseTypes...>::get(std::false_type include_pending) const -> std::variant<std::monostate, mapped_type, error_type> {
-  return mapped_.get(include_pending);
-}
-
-template<typename KeyType, typename Mapper, typename... BaseTypes>
-inline auto value_type<KeyType, Mapper, BaseTypes...>::get(std::true_type include_pending) -> std::variant<std::monostate, mapped_type, error_type, pending_type*> {
-  return mapped_.get(include_pending);
+inline auto value_type<KeyType, Mapper, BaseTypes...>::key() const -> std::optional<key_type> {
+  return std::make_optional(key_);
 }
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
@@ -186,6 +191,18 @@ inline auto value_type<identity_t, Mapper, BaseTypes...>::get_if_matching(functi
 template<typename Mapper, typename... BaseTypes>
 inline auto value_type<identity_t, Mapper, BaseTypes...>::matches(function_ref<bool(const key_type&)> matcher) const -> bool {
   return mapped_.matches(matcher);
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::get(std::false_type include_pending) const
+-> std::variant<std::monostate, mapped_type, error_type> {
+  return mapped_.get(include_pending);
+}
+
+template<typename Mapper, typename... BaseTypes>
+inline auto value_type<identity_t, Mapper, BaseTypes...>::get(std::true_type include_pending)
+-> std::variant<std::monostate, mapped_type, error_type, pending_type*> {
+  return mapped_.get(include_pending);
 }
 
 template<typename Mapper, typename... BaseTypes>
@@ -234,15 +251,11 @@ inline auto value_type<identity_t, Mapper, BaseTypes...>::get_pending() noexcept
 }
 
 template<typename Mapper, typename... BaseTypes>
-inline auto value_type<identity_t, Mapper, BaseTypes...>::get(std::false_type include_pending) const
--> std::variant<std::monostate, mapped_type, error_type> {
-  return mapped_.get(include_pending);
-}
-
-template<typename Mapper, typename... BaseTypes>
-inline auto value_type<identity_t, Mapper, BaseTypes...>::get(std::true_type include_pending)
--> std::variant<std::monostate, mapped_type, error_type, pending_type*> {
-  return mapped_.get(include_pending);
+inline auto value_type<identity_t, Mapper, BaseTypes...>::key() const -> std::optional<key_type> {
+  auto get_result = get(std::false_type());
+  if (auto& value = std::get_if<1>(&get_result))
+    return std::make_optional(std::move(value));
+  return std::nullopt;
 }
 
 

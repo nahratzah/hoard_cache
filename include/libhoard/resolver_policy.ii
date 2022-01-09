@@ -56,7 +56,7 @@ inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocato
 template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Keys>
-inline auto async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::async_resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator> {
+inline auto async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator> {
   using callback_allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<callback>;
 
   auto self = static_cast<HashTable*>(this);

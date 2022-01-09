@@ -9,6 +9,7 @@
 #include "resolver_policy.h"
 #include "expire_at_policy.h"
 #include "max_age_policy.h"
+#include "refresh_policy.h"
 
 #include "detail/meta.h"
 #include "detail/queue.h"

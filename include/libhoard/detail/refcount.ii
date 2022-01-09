@@ -207,6 +207,15 @@ inline auto refcount_ptr<T, Allocator>::reset() -> void {
 }
 
 template<typename T, typename Allocator>
+inline auto refcount_ptr<T, Allocator>::reset(element_type* ptr) -> void {
+  if (ptr != nullptr) refcount_ptr::inc_(ptr);
+  if (std::remove_const_t<T>* old_ptr = const_cast<std::remove_const_t<T>*>(std::exchange(ptr_, ptr))) {
+    std::allocator_traits<allocator_type>::destroy(alloc_, old_ptr); // May throw.
+    std::allocator_traits<allocator_type>::deallocate(alloc_, old_ptr, 1); // May throw.
+  }
+}
+
+template<typename T, typename Allocator>
 inline refcount_ptr<T, Allocator>::operator bool() const noexcept {
   return ptr_ != nullptr;
 }

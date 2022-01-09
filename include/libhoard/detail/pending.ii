@@ -68,6 +68,7 @@ inline auto pending<T, Allocator, ErrorType>::strengthen() noexcept -> bool {
 template<typename T, typename Allocator, typename ErrorType>
 inline auto pending<T, Allocator, ErrorType>::cancel() noexcept -> void {
   cbq_.clear();
+  mark_expired();
 }
 
 template<typename T, typename Allocator, typename ErrorType>

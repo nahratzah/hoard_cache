@@ -1,16 +1,12 @@
 #pragma once
 
-#include <algorithm>
 #include <condition_variable>
-#include <mutex>
 #include <thread>
 #include <tuple>
-#include <utility>
 
 #include "thread_safe_policy.h"
 #include "detail/linked_list.h"
 #include "detail/meta.h"
-#include "detail/refcount.h"
 
 namespace libhoard {
 

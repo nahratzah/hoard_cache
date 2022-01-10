@@ -156,7 +156,7 @@ class destroy_fn {
   {}
 
   template<typename T>
-  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T&>().destroy()) {
+  auto operator()([[maybe_unused]] T* nil) const noexcept -> decltype(std::declval<T&>().destroy()) {
     return self->T::destroy();
   }
 
@@ -225,7 +225,18 @@ inline auto hashtable_policy_container<ValueType, BaseTypes...>::policy_removal_
 
 template<typename ValueType, typename... BaseTypes>
 inline auto hashtable_policy_container<ValueType, BaseTypes...>::init() -> void {
-  base_invoke_(init_fn<hashtable_policy_container>(this));
+#if __cpp_exceptions
+  try
+#endif
+  {
+    base_invoke_(init_fn<hashtable_policy_container>(this));
+  }
+#if __cpp_exceptions
+  catch (...) {
+    base_invoke_(destroy_fn<hashtable_policy_container>(this)); // Cleanup.
+    throw;
+  }
+#endif
 }
 
 template<typename ValueType, typename... BaseTypes>

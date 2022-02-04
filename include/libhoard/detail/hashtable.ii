@@ -670,6 +670,13 @@ inline auto hashtable<KeyType, T, Error, Policies...>::allocate_value_type(Args&
 }
 
 template<typename KeyType, typename T, typename Error, typename... Policies>
+inline auto hashtable<KeyType, T, Error, Policies...>::value_to_refpointer(value_type* vptr) const -> value_pointer {
+  auto value_ptr = value_pointer(get_allocator());
+  value_ptr.reset(vptr);
+  return value_ptr;
+}
+
+template<typename KeyType, typename T, typename Error, typename... Policies>
 inline auto hashtable<KeyType, T, Error, Policies...>::link(std::size_t hash, value_pointer vptr) -> void {
   this->bht::link(hash, vptr.get(), [this]() { this->unlink_expired_elements_(); }); // may throw
   this->on_create_(vptr.get()); // never throws

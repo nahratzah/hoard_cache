@@ -6,93 +6,7 @@
 
 #include "detail/refcount.h"
 
-namespace libhoard::detail {
-namespace {
-
-
-template<typename ValueType>
-class on_refresh_event_fn {
-  public:
-  on_refresh_event_fn(ValueType* new_value, const ValueType* old_value) noexcept
-  : new_value(new_value),
-    old_value(old_value)
-  {}
-
-  template<typename T>
-  auto operator()([[maybe_unused]] T* nil) const -> decltype(std::declval<T*>()->on_refresh(std::declval<const ValueType*>())) {
-    return new_value->T::on_refresh(old_value);
-  }
-
-  private:
-  ValueType* new_value;
-  const ValueType* old_value;
-};
-
-
-} /* namespace libhoard::detail::<unnamed> */
-} /* namespace libhoard::detail */
-
 namespace libhoard {
-
-
-template<typename ValueType>
-inline auto refresh_impl_policy::on_refresh_event(ValueType* new_value, const ValueType* old_value) {
-  typename ValueType::base_types::template apply_t<detail::maybe_apply_for_each_type> functors;
-  functors(detail::on_refresh_event_fn(new_value, old_value));
-}
-
-
-template<typename HashTable>
-refresh_impl_policy::value_base::value_base([[maybe_unused]] const HashTable& table)
-{}
-
-
-template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline refresh_impl_policy::table_base<HashTable, ValueType, Allocator>::table_base([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator)
-{}
-
-template<typename HashTable, typename ValueType, typename Allocator>
-inline auto refresh_impl_policy::table_base<HashTable, ValueType, Allocator>::refresh(ValueType* raw_value_ptr) -> void {
-  if (raw_value_ptr->refresh_impl_policy::value_base::refresh_started_) return;
-
-  // Acquire owning reference to value.
-  auto value_ptr = detail::refcount_ptr<ValueType, Allocator>(static_cast<const HashTable*>(this)->get_allocator());
-  value_ptr.reset(raw_value_ptr);
-
-  auto opt_key = value_ptr->key();
-  if (!opt_key) {
-    // Expire the value so the resolver will perform a refresh the next time this value is looked up.
-    value_ptr->mark_expired();
-    return;
-  }
-
-  auto lookup_ptr = static_cast<HashTable*>(this)->resolve(value_ptr->hash(), std::move(*opt_key));
-  value_ptr->refresh_impl_policy::value_base::refresh_started_ = true; // never throws
-#if __cpp_exceptions
-  try
-#endif
-  {
-    if (typename ValueType::pending_type* pending = lookup_ptr->get_pending()) {
-      pending->add_callback(
-          [lookup_ptr=lookup_ptr.get(), value_ptr]([[maybe_unused]] const auto& value, [[maybe_unused]] const auto& ex) {
-            on_refresh_event(lookup_ptr, value_ptr.get());
-            value_ptr->mark_expired();
-          });
-    } else {
-      on_refresh_event(lookup_ptr.get(), value_ptr.get());
-      value_ptr->mark_expired();
-    }
-  }
-#if __cpp_exceptions
-  catch (...) {
-    // If we failed to install the callback, we mark the old element expired immediately,
-    // to ensure it can't linger after the resolve method completes.
-    value_ptr->mark_expired();
-    throw;
-  }
-#endif
-}
 
 
 template<typename Clock>
@@ -191,8 +105,7 @@ inline auto refresh_policy<Clock>::table_base<HashTable, ValueType, Allocator>::
     while (!delay_queue.empty() && now >= delay_queue.begin()->refresh_tp) {
       ValueType* vptr = delay_queue.begin().get();
       delay_queue.unlink(delay_queue.iterator_to(vptr));
-      if (!vptr->expired())
-        self->refresh(vptr); // XXX should we swallow exceptions?
+      self->refresh(vptr); // XXX should we swallow exceptions?
     }
   }
 }

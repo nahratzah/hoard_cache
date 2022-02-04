@@ -489,6 +489,7 @@ class hashtable
 
   template<typename... Args>
   auto allocate_value_type(Args&&... args) -> value_pointer;
+  auto value_to_refpointer(value_type* vptr) const -> value_pointer;
 
   auto link(std::size_t hash, value_pointer vptr) -> void;
 

@@ -7,48 +7,9 @@
 #include "thread_safe_policy.h"
 #include "detail/linked_list.h"
 #include "detail/meta.h"
+#include "detail/refresh_impl_policy.h"
 
 namespace libhoard {
-
-
-/**
- * \brief Policy that implements refresh logic.
- * \details
- * This is a policy that's used as a dependency by other policies.
- * It installs a `void HashTable::refresh(ValueType*)` function, which refreshes the value.
- * It is safe to call this function multiple times.
- *
- * In order for this policy to work, the cache must have a resolver policy.
- */
-class refresh_impl_policy {
-  public:
-  class value_base;
-  template<typename HashTable, typename ValueType, typename Allocator> class table_base;
-
-  private:
-  template<typename ValueType>
-  static auto on_refresh_event(ValueType* new_value, const ValueType* old_value);
-};
-
-class refresh_impl_policy::value_base {
-  template<typename HashTable, typename ValueType, typename Allocator> friend class refresh_impl_policy::table_base;
-
-  public:
-  template<typename HashTable>
-  value_base(const HashTable& table);
-
-  private:
-  bool refresh_started_ = false;
-};
-
-template<typename HashTable, typename ValueType, typename Allocator>
-class refresh_impl_policy::table_base {
-  public:
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, const Allocator& allocator);
-
-  auto refresh(ValueType* raw_value_ptr) -> void;
-};
 
 
 template<typename Clock>
@@ -57,7 +18,7 @@ class refresh_policy {
   struct tag;
 
   public:
-  using dependencies = detail::type_list<refresh_impl_policy, thread_safe_policy>;
+  using dependencies = detail::type_list<detail::refresh_impl_policy, thread_safe_policy>;
   class value_base;
   template<typename HashTable, typename ValueType, typename Allocator> class table_base;
 

@@ -30,6 +30,7 @@ if (UnitTest++_FOUND)
   if (HAS_ASIO_HEADERS)
     add_executable (asio_tests
         asio/resolver_policy.cc
+        asio/refresh_policy.cc
         test_main.cc)
     target_link_libraries (asio_tests UnitTest++ libhoard)
     target_include_directories(asio_tests PUBLIC ${UTPP_INCLUDE_DIRS})

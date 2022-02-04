@@ -9,38 +9,31 @@
 
 #include "detail/hashtable.h"
 #include "detail/mapped_type.h"
+#include "detail/cache_get.h"
+#include "detail/cache_async_get.h"
 
 namespace libhoard {
 
 
 template<typename KeyType, typename T, typename... Policies>
-class cache {
+class cache
+: public detail::cache_get<cache<KeyType, T, Policies...>, detail::hashtable<KeyType, T, int, Policies...>>,
+  public detail::async_getter_from_policies<cache<KeyType, T, Policies...>, detail::hashtable<KeyType, T, int, Policies...>>
+{
+  template<typename Impl, typename HashTableType> friend class detail::cache_get_impl;
+  template<typename Tag, typename Cache, typename HashTable> friend class detail::async_getter_impl;
+
   private:
   using hashtable_type = detail::hashtable<KeyType, T, int, Policies...>;
 
   public:
   template<typename... Args>
   explicit cache(Args&&... args)
-  : impl_(std::make_shared<hashtable_type>(std::forward_as_tuple(std::forward<Args>(args)...)))
+  : impl_(std::make_shared<hashtable_type>(std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...)))
   {}
 
   template<typename... Keys>
   auto get_if_exists(const Keys&... keys) const
-      noexcept(noexcept(std::declval<hashtable_type&>().get_if_exists(std::declval<const Keys&>()...)))
-  -> std::optional<T> {
-    std::lock_guard<hashtable_type> lck{ *impl_ };
-
-    auto v = impl_->get_if_exists(keys...);
-    switch (v.index()) {
-      default:
-        return std::nullopt;
-      case 1:
-        return std::make_optional(std::get<1>(std::move(v)));
-    }
-  }
-
-  template<typename... Keys>
-  auto get(const Keys&... keys) const
       noexcept(noexcept(std::declval<hashtable_type&>().get_if_exists(std::declval<const Keys&>()...)))
   -> std::optional<T> {
     std::lock_guard<hashtable_type> lck{ *impl_ };

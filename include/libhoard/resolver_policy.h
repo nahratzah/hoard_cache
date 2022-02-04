@@ -7,6 +7,7 @@
 #include "shared_from_this_policy.h"
 #include "detail/meta.h"
 #include "detail/refcount.h"
+#include "detail/async_resolver_callback.h"
 
 namespace libhoard {
 
@@ -58,7 +59,7 @@ template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
 class async_resolver_policy<Functor>::table_base {
   public:
-  class callback;
+  using callback = detail::async_resolver_callback<HashTable, ValueType, Allocator>;
 
   template<typename... Args>
   table_base(const std::tuple<Args...>& args, const Allocator& alloc);
@@ -67,27 +68,6 @@ class async_resolver_policy<Functor>::table_base {
   auto resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator>;
 
   const Functor resolver_;
-};
-
-template<typename Functor>
-template<typename HashTable, typename ValueType, typename Allocator>
-class async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::callback {
-  friend table_base;
-
-  public:
-  callback(const std::shared_ptr<HashTable>& self, detail::refcount_ptr<ValueType, Allocator> value);
-  callback(const callback&) = delete;
-  ~callback();
-
-  template<typename... Args>
-  auto assign(Args&&... args) -> bool;
-  auto assign_error(typename ValueType::error_type ex) noexcept -> bool;
-  auto cancel() noexcept -> bool;
-
-  private:
-  const std::weak_ptr<HashTable> weak_self;
-  detail::refcount_ptr<ValueType, Allocator> value;
-  bool called = false;
 };
 
 

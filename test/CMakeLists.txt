@@ -2,6 +2,9 @@ find_package(UnitTest++)
 
 if (UnitTest++_FOUND)
   include(CTest)
+  include(CheckIncludeFileCXX)
+
+  check_include_file_cxx(asio.hpp HAS_ASIO_HEADERS)
 
   add_executable (tests
       detail/basic_hashtable.cc
@@ -23,4 +26,15 @@ if (UnitTest++_FOUND)
   add_test (libhoard_tests tests)
   set_property (TARGET tests PROPERTY CXX_STANDARD 17)
   set_property (TARGET tests PROPERTY CXX_STANDARD_REQUIRED 17)
+
+  if (HAS_ASIO_HEADERS)
+    add_executable (asio_tests
+        asio/resolver_policy.cc
+        test_main.cc)
+    target_link_libraries (asio_tests UnitTest++ libhoard)
+    target_include_directories(asio_tests PUBLIC ${UTPP_INCLUDE_DIRS})
+    add_test (libhoard_asio_tests asio_tests)
+    set_property (TARGET asio_tests PROPERTY CXX_STANDARD 17)
+    set_property (TARGET asio_tests PROPERTY CXX_STANDARD_REQUIRED 17)
+  endif ()
 endif ()

@@ -24,8 +24,7 @@ inline auto pending<T, Allocator, ErrorType>::resolve_success(const value_type& 
     [[likely]]
 #endif
   {
-    const error_type ex;
-    for (auto& q : cbq_) std::invoke(q, v, ex);
+    for (auto& q : cbq_) std::invoke(q, v, error_type());
     cbq_.clear();
   }
 }
@@ -37,8 +36,7 @@ inline auto pending<T, Allocator, ErrorType>::resolve_failure(const error_type& 
     [[likely]]
 #endif
   {
-    const value_type v;
-    for (auto& q : cbq_) std::invoke(q, v, ex);
+    for (auto& q : cbq_) std::invoke(q, value_type(), ex);
     cbq_.clear();
   }
 }

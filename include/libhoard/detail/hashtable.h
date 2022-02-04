@@ -14,6 +14,7 @@
 #include "function_ref.h"
 #include "mapped_type.h"
 #include "meta.h"
+#include "traits.h"
 #include "refcount.h"
 #include "thread_unsafe_policy.h"
 #include "value_type.h"
@@ -28,61 +29,6 @@ namespace libhoard::detail {
 
 template<typename KeyType, typename T, typename Error, typename... Policies>
 class hashtable;
-
-
-template<typename>
-struct has_equal
-: public std::false_type
-{};
-
-template<typename Equal>
-struct has_equal<equal<Equal>>
-: public std::true_type
-{};
-
-
-template<typename>
-struct has_hash
-: public std::false_type
-{};
-
-template<typename Hash>
-struct has_hash<hash<Hash>>
-: public std::true_type
-{};
-
-
-template<typename>
-struct has_allocator
-: public std::false_type
-{};
-
-template<typename Allocator>
-struct has_allocator<allocator<Allocator>>
-: public std::true_type
-{};
-
-
-template<typename>
-struct has_resolver
-: public std::false_type
-{};
-
-template<typename Functor>
-struct has_resolver<resolver_policy<Functor>>
-: public std::true_type
-{};
-
-
-template<typename>
-struct has_async_resolver
-: public std::false_type
-{};
-
-template<typename Functor>
-struct has_async_resolver<async_resolver_policy<Functor>>
-: public std::true_type
-{};
 
 
 template<typename Policy> struct dependent_policies_; // Forward declaration.
@@ -166,7 +112,7 @@ template<typename ValueType, typename... BaseTypes>
 class hashtable_policy_container
 : public BaseTypes...
 {
-  template<typename Functor> friend class ::libhoard::async_resolver_policy; // Allow async_resolver_policy to emit the on_asign_ event.
+  template<typename, typename, typename> friend class async_resolver_callback; // Allow async_resolver_policy to emit the on_asign_ event.
 
   public:
   static constexpr bool has_policy_removal_check = std::disjunction_v<has_policy_removal_check_<BaseTypes>...>;
@@ -421,6 +367,8 @@ class hashtable
   using bht = typename helper_type::bht;
 
   public:
+  using uses_resolver = std::integral_constant<bool, helper_type::has_resolver_policy || helper_type::has_async_resolver_policy>;
+  using uses_async_resolver = std::integral_constant<bool, helper_type::has_async_resolver_policy>;
   using policy_type_list = typename helper_type::all_policies;
   using value_type = typename helper_type::value_type;
   using key_type = typename helper_type::key_type;

@@ -114,10 +114,7 @@ class async_getter_impl<asio_resolver_policy<Functor, Executor>, Impl, HashTable
 
   template<typename CompletionToken, typename... Keys>
   auto async_get(CompletionToken&& token, const Keys&... keys)
-#if 0
-  -> typename ::asio::async_result<std::decay_t<CompletionToken>, void(typename HashTableType::mapped_type, typename HashTableType::error_type)>::result_type
-#endif
-  {
+  -> decltype(std::declval<::asio::async_result<std::decay_t<CompletionToken>, void(typename HashTableType::mapped_type, typename HashTableType::error_type)>>().get()) {
     Impl*const self = static_cast<Impl*>(this);
     std::lock_guard<HashTableType> lck{ *self->impl_ };
 

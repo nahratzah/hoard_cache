@@ -102,7 +102,7 @@ SUITE(asio_refresh_fn_policy) {
     struct refresh_tp_impl {
       refresh_tp_impl(fixture* self) : self(self) {}
 
-      auto operator()(const std::string& s) const -> std::chrono::system_clock::time_point {
+      auto operator()([[maybe_unused]] const std::string& s) const -> std::chrono::system_clock::time_point {
         ++self->refresh_tp_called_count;
 
         auto result = self->refresh_tps.front();

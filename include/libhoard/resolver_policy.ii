@@ -63,9 +63,8 @@ inline auto async_resolver_policy<Functor>::table_base<HashTable, ValueType, All
   auto new_value = self->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...));
 
   const std::shared_ptr<callback> callback_ptr = std::allocate_shared<callback>(callback_allocator_type(self->get_allocator()), self->shared_from_this(), new_value);
-  resolver_(callback_ptr, keys...);
-
   self->link(hash, new_value);
+  resolver_(callback_ptr, keys...);
   return new_value;
 }
 

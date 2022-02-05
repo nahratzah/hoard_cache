@@ -72,13 +72,12 @@ class asio_resolver_policy<Functor, Executor>::table_base {
     auto self = static_cast<HashTable*>(this);
     auto new_value = self->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...));
 
+    self->link(hash, new_value);
     executor.dispatch(
         [functor=this->functor, cb=std::allocate_shared<callback>(callback_allocator_type(self->get_allocator()), self->shared_from_this(), new_value), keys...]() mutable {
           std::invoke(std::move(functor), std::move(cb), std::move(keys)...);
         },
         self->get_allocator());
-
-    self->link(hash, new_value);
     return new_value;
   }
 

@@ -28,6 +28,10 @@ inline basic_hashtable_algorithms::basic_hashtable_algorithms(basic_hashtable_al
       });
 }
 
+inline auto basic_hashtable_algorithms::is_hashtable_linked(const element* elem) noexcept -> bool {
+  return elem->successor_ != nullptr;
+}
+
 inline auto basic_hashtable_algorithms::empty() const noexcept -> bool {
   return head_ == nullptr;
 }

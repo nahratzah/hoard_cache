@@ -52,6 +52,7 @@ class basic_hashtable_algorithms {
   ~basic_hashtable_algorithms() noexcept = default;
 
   public:
+  static auto is_hashtable_linked(const element* elem) noexcept -> bool;
   auto empty() const noexcept -> bool;
   auto size() const noexcept -> size_type;
   auto bucket_count() const noexcept -> size_type;

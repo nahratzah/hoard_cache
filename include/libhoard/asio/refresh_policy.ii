@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <mutex>
 #include <utility>
+#include <variant>
 
 namespace libhoard {
 
@@ -76,6 +77,92 @@ template<typename Clock, typename Executor, typename WaitTraits>
 template<typename HashTable, typename ValueType, typename Allocator>
 inline auto asio_refresh_policy<Clock, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::on_unlink_(value_base* vptr) noexcept -> void {
   vptr->refresh.cancel();
+}
+
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+inline asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::asio_refresh_fn_policy(Executor executor, RefreshFn refresh_fn, typename Clock::duration idle_timer)
+: idle_timer(idle_timer),
+  executor(std::move(executor)),
+  refresh_fn(std::move(refresh_fn))
+{}
+
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::value_base::value_base(const table_base<HashTable, ValueType, Allocator>& table)
+: refresh(table.executor)
+{}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::value_base::expired() const noexcept -> bool {
+  return Clock::now() >= cancel_tp;
+}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::value_base::on_refresh(const value_base* old_value) noexcept -> void {
+  cancel_tp = std::min(cancel_tp, old_value->cancel_tp);
+}
+
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+template<typename... Args>
+inline asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator)
+: idle_timer(std::get<asio_refresh_fn_policy>(args).idle_timer),
+  executor(std::get<asio_refresh_fn_policy>(args).executor),
+  refresh_fn(std::get<asio_refresh_fn_policy>(args).refresh_fn)
+{}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::on_assign_(ValueType* vptr, bool value, [[maybe_unused]] bool assigned_via_callback) noexcept -> void {
+  if (value) {
+    update_refresh_(*vptr, std::invoke(refresh_fn, std::get<1>(vptr->get(std::false_type()))));
+    vptr->asio_refresh_fn_policy::value_base::refresh.async_wait(
+        [ weak_ref=static_cast<HashTable*>(this)->weak_from_this(),
+          vptr=static_cast<const HashTable*>(this)->value_to_refpointer(vptr)
+        ](const asio::error_code& error) {
+          if (error) return;
+          auto self_ptr=weak_ref.lock();
+          if (!self_ptr) return;
+          std::lock_guard<HashTable> lck{ *self_ptr };
+          self_ptr->refresh(vptr.get());
+        });
+
+    if (idle_timer != Clock::duration::zero()) {
+      vptr->asio_refresh_fn_policy::value_base::cancel_tp = std::min(
+          vptr->asio_refresh_fn_policy::value_base::cancel_tp,
+          Clock::now() + idle_timer);
+    }
+  }
+}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::on_hit_(ValueType* vptr) noexcept -> void {
+  if (idle_timer != Clock::duration::zero() && vptr->holds_value())
+    vptr->asio_refresh_fn_policy::value_base::cancel_tp = Clock::now() + idle_timer;
+}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::on_unlink_(value_base* vptr) noexcept -> void {
+  vptr->refresh.cancel();
+}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+template<typename Rep, typename Period>
+inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::update_refresh_(asio_refresh_fn_policy::value_base& v, std::chrono::duration<Rep, Period> delay) -> void {
+  v.asio_refresh_fn_policy::value_base::refresh.expires_after(delay);
+}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+template<typename Duration>
+inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::update_refresh_(asio_refresh_fn_policy::value_base& v, std::chrono::time_point<Clock, Duration> tp) -> void {
+  v.asio_refresh_fn_policy::value_base::refresh.expires_at(tp);
 }
 
 

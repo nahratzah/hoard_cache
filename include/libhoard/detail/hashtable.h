@@ -392,6 +392,7 @@ class hashtable
   explicit hashtable(const std::tuple<Args...>& args, float max_load_factor, allocator_type allocator = allocator_type());
   ~hashtable();
 
+  using bht::is_hashtable_linked;
   using bht::empty;
   using bht::size;
   using bht::bucket_count;

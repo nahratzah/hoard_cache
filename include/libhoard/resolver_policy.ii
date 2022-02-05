@@ -76,7 +76,7 @@ namespace libhoard::detail {
 
 template<typename Functor, typename Impl, typename HashTableType>
 template<typename... Keys>
-inline auto async_getter_impl<async_resolver_policy<Functor>, Impl, HashTableType>::get(const Keys&... keys)
+inline auto cache_base<async_resolver_policy<Functor>, Impl, HashTableType>::get(const Keys&... keys)
 -> std::future<std::variant<typename HashTableType::mapped_type, typename HashTableType::error_type>> {
   using variant_type = std::variant<typename HashTableType::mapped_type, typename HashTableType::error_type>;
   using promise_type = std::promise<variant_type>;

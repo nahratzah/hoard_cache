@@ -50,7 +50,7 @@ class async_resolver_policy {
 
   template<typename HashTable, typename ValueType, typename Allocator> class table_base;
   template<typename Impl, typename HashTableType>
-  using async_getter = detail::async_getter_impl<async_resolver_policy, Impl, HashTableType>;
+  using add_cache_base = detail::cache_base<async_resolver_policy, Impl, HashTableType>;
 
   explicit async_resolver_policy(Functor resolver);
 
@@ -83,14 +83,14 @@ namespace libhoard::detail {
 
 
 template<typename Functor, typename Impl, typename HashTableType>
-class async_getter_impl<async_resolver_policy<Functor>, Impl, HashTableType> {
+class cache_base<async_resolver_policy<Functor>, Impl, HashTableType> {
   protected:
-  async_getter_impl() noexcept = default;
-  async_getter_impl(const async_getter_impl&) noexcept = default;
-  async_getter_impl(async_getter_impl&&) noexcept = default;
-  ~async_getter_impl() noexcept = default;
-  auto operator=(const async_getter_impl&) noexcept -> async_getter_impl& = default;
-  auto operator=(async_getter_impl&&) noexcept -> async_getter_impl& = default;
+  cache_base() noexcept = default;
+  cache_base(const cache_base&) noexcept = default;
+  cache_base(cache_base&&) noexcept = default;
+  ~cache_base() noexcept = default;
+  auto operator=(const cache_base&) noexcept -> cache_base& = default;
+  auto operator=(cache_base&&) noexcept -> cache_base& = default;
 
   public:
   template<typename... Keys>

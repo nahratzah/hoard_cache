@@ -5,50 +5,50 @@
 namespace libhoard::detail {
 
 
-template<typename Tag, typename Cache, typename HashTable> class async_getter_impl;
+template<typename Tag, typename Cache, typename HashTable> class cache_base;
 
 
 template<typename Policy, typename Cache, typename HashTable, typename = void>
-struct figure_out_async_getter_impl_ {
+struct figure_out_cache_base_impl_ {
   using type = void;
 };
 
 template<typename Policy, typename Cache, typename HashTable>
-struct figure_out_async_getter_impl_<Policy, Cache, HashTable, std::void_t<typename Policy::template async_getter<Cache, HashTable>>> {
-  using type = typename Policy::template async_getter<Cache, HashTable>;
+struct figure_out_cache_base_impl_<Policy, Cache, HashTable, std::void_t<typename Policy::template add_cache_base<Cache, HashTable>>> {
+  using type = typename Policy::template add_cache_base<Cache, HashTable>;
 };
 
 template<typename Cache, typename HashTable>
-struct figure_out_async_getter_ {
+struct figure_out_cache_base_ {
   template<typename Policy>
-  using impl = figure_out_async_getter_impl_<Policy, Cache, HashTable>;
+  using impl = figure_out_cache_base_impl_<Policy, Cache, HashTable>;
 };
 
 
 template<typename... AsyncGetters>
-class async_getter_from_policies_impl
+class cache_base_from_policies_impl
 : public AsyncGetters...
 {
   protected:
-  async_getter_from_policies_impl() = default;
-  async_getter_from_policies_impl(const async_getter_from_policies_impl&) = default;
-  async_getter_from_policies_impl(async_getter_from_policies_impl&&) = default;
-  ~async_getter_from_policies_impl() noexcept = default;
-  auto operator=(const async_getter_from_policies_impl&) -> async_getter_from_policies_impl& = default;
-  auto operator=(async_getter_from_policies_impl&&) noexcept -> async_getter_from_policies_impl& = default;
+  cache_base_from_policies_impl() = default;
+  cache_base_from_policies_impl(const cache_base_from_policies_impl&) = default;
+  cache_base_from_policies_impl(cache_base_from_policies_impl&&) = default;
+  ~cache_base_from_policies_impl() noexcept = default;
+  auto operator=(const cache_base_from_policies_impl&) -> cache_base_from_policies_impl& = default;
+  auto operator=(cache_base_from_policies_impl&&) noexcept -> cache_base_from_policies_impl& = default;
 };
 
 template<typename Cache, typename HashTable>
-class async_getter_from_policies
-: public HashTable::policy_type_list::template transform_t<figure_out_async_getter_<Cache, HashTable>::template impl>::template remove_all_t<void>::template apply_t<async_getter_from_policies_impl>
+class cache_base_from_policies
+: public HashTable::policy_type_list::template transform_t<figure_out_cache_base_<Cache, HashTable>::template impl>::template remove_all_t<void>::template apply_t<cache_base_from_policies_impl>
 {
   protected:
-  async_getter_from_policies() = default;
-  async_getter_from_policies(const async_getter_from_policies&) = default;
-  async_getter_from_policies(async_getter_from_policies&&) = default;
-  ~async_getter_from_policies() noexcept = default;
-  auto operator=(const async_getter_from_policies&) -> async_getter_from_policies& = default;
-  auto operator=(async_getter_from_policies&&) noexcept -> async_getter_from_policies& = default;
+  cache_base_from_policies() = default;
+  cache_base_from_policies(const cache_base_from_policies&) = default;
+  cache_base_from_policies(cache_base_from_policies&&) = default;
+  ~cache_base_from_policies() noexcept = default;
+  auto operator=(const cache_base_from_policies&) -> cache_base_from_policies& = default;
+  auto operator=(cache_base_from_policies&&) noexcept -> cache_base_from_policies& = default;
 };
 
 

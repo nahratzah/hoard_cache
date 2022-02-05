@@ -130,7 +130,7 @@ SUITE(asio_refresh_fn_policy) {
 
     int call_count = 0;
     resolver_values = { "xxx", "yyy" };
-    refresh_tps = { std::chrono::system_clock::now() + 1s, std::chrono::system_clock::now() + 8s };
+    refresh_tps = { std::chrono::system_clock::now() + 1s, std::chrono::system_clock::now() + 5s };
     typename asio::steady_timer::rebind_executor<asio::io_context::executor_type>::other delay(io_context.get_executor());
 
     cache.async_get(

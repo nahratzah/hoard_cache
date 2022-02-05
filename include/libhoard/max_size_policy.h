@@ -21,6 +21,9 @@ class max_size_policy {
   ///\tparam ValueType Type held by the hashtable. (This parameter is unused.)
   template<typename HashTable, typename ValueType, typename Allocator>
   class table_base {
+    private:
+    explicit table_base(const max_size_policy& p) noexcept;
+
     public:
     ///\brief Constructor.
     ///\note Requires one of the elements in \p args to be max_size

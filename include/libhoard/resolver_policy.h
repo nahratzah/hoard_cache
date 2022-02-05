@@ -3,11 +3,15 @@
 #include <cstddef>
 #include <memory>
 #include <tuple>
+#include <future>
+#include <variant>
 
 #include "shared_from_this_policy.h"
 #include "detail/meta.h"
 #include "detail/refcount.h"
 #include "detail/async_resolver_callback.h"
+#include "detail/cache_async_get.h"
+#include "detail/traits.h"
 
 namespace libhoard {
 
@@ -45,6 +49,8 @@ class async_resolver_policy {
   using dependencies = detail::type_list<shared_from_this_policy>;
 
   template<typename HashTable, typename ValueType, typename Allocator> class table_base;
+  template<typename Impl, typename HashTableType>
+  using async_getter = detail::async_getter_impl<async_resolver_policy, Impl, HashTableType>;
 
   explicit async_resolver_policy(Functor resolver);
 
@@ -72,5 +78,39 @@ class async_resolver_policy<Functor>::table_base {
 
 
 } /* namespace libhoard */
+
+namespace libhoard::detail {
+
+
+template<typename Functor, typename Impl, typename HashTableType>
+class async_getter_impl<async_resolver_policy<Functor>, Impl, HashTableType> {
+  protected:
+  async_getter_impl() noexcept = default;
+  async_getter_impl(const async_getter_impl&) noexcept = default;
+  async_getter_impl(async_getter_impl&&) noexcept = default;
+  ~async_getter_impl() noexcept = default;
+  auto operator=(const async_getter_impl&) noexcept -> async_getter_impl& = default;
+  auto operator=(async_getter_impl&&) noexcept -> async_getter_impl& = default;
+
+  public:
+  template<typename... Keys>
+  auto get(const Keys&... keys)
+  -> std::future<std::variant<typename HashTableType::mapped_type, typename HashTableType::error_type>>;
+};
+
+
+template<typename Functor>
+struct has_resolver<resolver_policy<Functor>>
+: std::true_type
+{};
+
+
+template<typename Functor>
+struct has_async_resolver<async_resolver_policy<Functor>>
+: std::true_type
+{};
+
+
+} /* namespace libhoard::detail */
 
 #include "resolver_policy.ii"

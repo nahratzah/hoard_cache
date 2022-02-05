@@ -36,9 +36,6 @@ class async_getter_from_policies_impl
   ~async_getter_from_policies_impl() noexcept = default;
   auto operator=(const async_getter_from_policies_impl&) -> async_getter_from_policies_impl& = default;
   auto operator=(async_getter_from_policies_impl&&) noexcept -> async_getter_from_policies_impl& = default;
-
-  public:
-  using AsyncGetters::async_get...;
 };
 
 template<typename Cache, typename HashTable>

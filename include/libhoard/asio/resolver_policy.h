@@ -150,7 +150,7 @@ class async_getter_impl<asio_resolver_policy<Functor, Executor>, Impl, HashTable
 
 template<typename Functor, typename Executor>
 struct has_async_resolver<asio_resolver_policy<Functor, Executor>>
-: public std::true_type
+: std::true_type
 {};
 
 

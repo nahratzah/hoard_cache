@@ -10,6 +10,7 @@
 #include "UnitTest++/UnitTest++.h"
 
 #include <libhoard/detail/hashtable.h>
+#include <libhoard/cache.h>
 
 SUITE(resolver_policy) {
   class fixture {
@@ -27,16 +28,18 @@ SUITE(resolver_policy) {
         "this is not an async resolver policy");
 
     using hashtable_type = libhoard::detail::hashtable<int, std::string, std::exception_ptr, libhoard::resolver_policy<resolver_impl>>;
+    using cache_type = libhoard::cache<int, std::string, libhoard::resolver_policy<resolver_impl>>;
 
     std::unique_ptr<hashtable_type> hashtable = std::make_unique<hashtable_type>(std::make_tuple(libhoard::resolver_policy<resolver_impl>()));
+    cache_type cache = cache_type(libhoard::resolver_policy<resolver_impl>());
   };
 
   TEST_FIXTURE(fixture, get) {
-    auto three = hashtable->get(3);
+    auto three = cache.get(3);
     CHECK_EQUAL(1u, three.index());
     CHECK_EQUAL(std::string("xxx"), std::get<1>(three));
 
-    auto four = hashtable->get(4);
+    auto four = cache.get(4);
     CHECK_EQUAL(1u, four.index());
     CHECK_EQUAL(std::string("xxxx"), std::get<1>(four));
   }
@@ -82,6 +85,22 @@ SUITE(async_resolver_policy) {
       fixture*const self;
     };
 
+    struct resolver_impl_for_int_errors {
+      resolver_impl_for_int_errors(fixture* self) : self(self) {}
+
+      template<typename CallbackPtr>
+      auto operator()(const CallbackPtr& callback_ptr, int n) const -> void {
+        if (self->error) {
+          callback_ptr->assign_error(1);
+          self->error = nullptr;
+        } else {
+          callback_ptr->assign(n, 'x');
+        }
+      }
+
+      fixture*const self;
+    };
+
     struct thread_resolver_impl {
       thread_resolver_impl(fixture* self) : self(self) {}
 
@@ -94,6 +113,7 @@ SUITE(async_resolver_policy) {
     };
 
     using hashtable_type = libhoard::detail::hashtable<int, std::string, std::exception_ptr, libhoard::async_resolver_policy<resolver_impl>>;
+    using cache_type = libhoard::cache<int, std::string, libhoard::async_resolver_policy<resolver_impl_for_int_errors>>;
 
     ~fixture() {
       std::for_each(tasks.begin(), tasks.end(), [](std::thread& thr) { thr.join(); });
@@ -102,29 +122,14 @@ SUITE(async_resolver_policy) {
     std::vector<std::thread> tasks;
     std::exception_ptr error; // If set, next callback invocation will install an error.
     std::shared_ptr<hashtable_type> hashtable = std::make_shared<hashtable_type>(std::make_tuple(libhoard::async_resolver_policy<resolver_impl>(this)));
+    cache_type cache = cache_type(libhoard::async_resolver_policy<resolver_impl_for_int_errors>(this));
   };
 
   class test_exception : public std::exception {};
 
   TEST_FIXTURE(fixture, async_get) {
-    std::future<std::string> three;
-
-    {
-      std::promise<std::string> three_prom;
-      three = three_prom.get_future();
-      hashtable->async_get(
-          [three_prom=std::move(three_prom)](const std::string& value, const std::exception_ptr& error, auto immediate) mutable {
-            CHECK(immediate() == true);
-
-            if (error)
-              three_prom.set_exception(error);
-            else
-              three_prom.set_value(value);
-          },
-          3);
-    }
-
-    CHECK_EQUAL(std::string("xxx"), three.get());
+    auto variant_future = cache.get(3);
+    CHECK_EQUAL(std::string("xxx"), std::get<0>(variant_future.get()));
   }
 
   TEST_FIXTURE(fixture, async_get_with_error) {

@@ -70,3 +70,36 @@ inline auto async_resolver_policy<Functor>::table_base<HashTable, ValueType, All
 
 
 } /* namespace libhoard */
+
+namespace libhoard::detail {
+
+
+template<typename Functor, typename Impl, typename HashTableType>
+template<typename... Keys>
+inline auto async_getter_impl<async_resolver_policy<Functor>, Impl, HashTableType>::get(const Keys&... keys)
+-> std::future<std::variant<typename HashTableType::mapped_type, typename HashTableType::error_type>> {
+  using variant_type = std::variant<typename HashTableType::mapped_type, typename HashTableType::error_type>;
+  using promise_type = std::promise<variant_type>;
+  using future_type = std::future<variant_type>;
+
+  Impl*const self = static_cast<Impl*>(this);
+  std::lock_guard<HashTableType> lck{ *self->impl_ };
+
+  promise_type prom = promise_type(std::allocator_arg, self->impl_->get_allocator());
+  future_type fut = prom.get_future();
+
+  self->impl_->async_get(
+      [ prom=std::move(prom)
+      ](const typename HashTableType::mapped_type& value, const typename HashTableType::error_type& err, [[maybe_unused]] auto is_immediately_resolved) mutable {
+        if (err)
+          prom.set_value(variant_type(std::in_place_index<1>, err));
+        else
+          prom.set_value(variant_type(std::in_place_index<0>, value));
+      },
+      keys...);
+
+  return fut;
+}
+
+
+} /* namespace libhoard::detail */

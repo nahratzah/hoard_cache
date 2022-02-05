@@ -166,7 +166,10 @@ If another lookup for the same key arrives, it'll share the existing lookup.
 
 When using an async resolver, you'll also need to perform an asyc lookup:
 ```
-// XXX this is not yet implemented, oops
+using error_type = int; // XXX haven't made a policy to control errors yet
+
+std::future<std::variant<mapped_type, error_type>> future_value = cache.get(3);
+future_value.get(); // std::variant(std::in_place_index<0>, "3")
 ```
 
 ## Refreshing Values

@@ -16,14 +16,6 @@ class max_size_policy {
   public:
   using dependencies = detail::type_list<detail::queue_policy>;
 
-  ///\brief Value that is to be passed into the cache, to set the max size.
-  class max_size {
-    public:
-    max_size(std::size_t v) noexcept;
-
-    std::size_t value;
-  };
-
   ///\brief Policy implementation.
   ///\tparam HashTable The derived hashtable type.
   ///\tparam ValueType Type held by the hashtable. (This parameter is unused.)
@@ -41,6 +33,11 @@ class max_size_policy {
     private:
     std::size_t max_size_;
   };
+
+  explicit max_size_policy(std::size_t v) noexcept;
+
+  private:
+  std::size_t value;
 };
 
 

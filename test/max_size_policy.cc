@@ -15,7 +15,7 @@ SUITE(max_size_policy) {
     using libhoard::max_size_policy;
     using hashtable_type = hashtable<int, std::string, std::error_code, max_size_policy>;
 
-    auto table = std::make_shared<hashtable_type>(std::make_tuple(max_size_policy::max_size(maxsize)));
+    auto table = std::make_shared<hashtable_type>(std::make_tuple(max_size_policy(maxsize)));
     for (unsigned int i = 0; i < maxsize; ++i)
       table->emplace(i, "bla");
     CHECK_EQUAL(maxsize, table->count()); // First `maxsize` elements don't cause anything to expire.

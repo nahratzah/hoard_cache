@@ -8,7 +8,7 @@
 #include <sstream>
 #include <tuple>
 
-constexpr bool use_fast_fibonacci = false; // use slow algorithm
+constexpr bool use_fast_fibonacci = true; // use fast algorithm
 
 struct fib_resolver {
   auto operator()(std::uint32_t v) const -> std::tuple<std::uintmax_t>;
@@ -51,7 +51,9 @@ void example_lookup(std::uint32_t v) {
     std::cout << "fibonacci(" << std::setw(3) << v << ") = " << std::setw(19) << v_fib <<
         " (lookup took " << std::fixed << std::setprecision(3) << std::setw(11) << lookup_duration.count() << " microseconds)" << std::endl;
   } catch (const std::exception& ex) {
-    std::cerr << "error looking up fibonacci(" << v << "): " << ex.what() << std::endl;
+    std::chrono::duration<double, std::micro> lookup_duration = std::chrono::steady_clock::now() - b;
+    std::cerr << "error looking up fibonacci(" << v << "): " << ex.what() <<
+        " (lookup took " << std::fixed << std::setprecision(3) << std::setw(11) << lookup_duration.count() << " microseconds)" << std::endl;
   }
 }
 
@@ -59,11 +61,19 @@ int main() {
   constexpr std::uint32_t highest_input = (use_fast_fibonacci ? 90 : 40);
 
   std::cout << "with empty cache:" << std::endl;
-  for (int i = 0; i <= highest_input; ++i) example_lookup(i);
-  if constexpr(use_fast_fibonacci) example_lookup(200);
+  for (int i = 0; i <= highest_input; ++i)
+    example_lookup(i);
+  if constexpr(use_fast_fibonacci) {
+    for (int i = 100; i <= 120; ++i)
+      example_lookup(i);
+  }
 
   std::cout << "------------------------------------------------------------------------\n";
   std::cout << "with primed cache:" << std::endl;
-  for (int i = 0; i <= highest_input; ++i) example_lookup(i);
-  if constexpr(use_fast_fibonacci) example_lookup(200);
+  for (int i = 0; i <= highest_input; ++i)
+    example_lookup(i);
+  if constexpr(use_fast_fibonacci) {
+    for (int i = 100; i <= 120; ++i)
+      example_lookup(i);
+  }
 }

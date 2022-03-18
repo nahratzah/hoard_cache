@@ -28,7 +28,21 @@ template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Keys>
 inline auto resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator> {
   auto self = static_cast<HashTable*>(this);
-  auto new_value = self->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...), std::invoke(resolver_, keys...));
+  detail::refcount_ptr<ValueType, Allocator> new_value;
+  if constexpr(noexcept(std::invoke(resolver_, keys...))) {
+    new_value = self->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...), std::invoke(resolver_, keys...));
+  } else {
+    new_value = self->allocate_value_type(std::piecewise_construct, std::forward_as_tuple(keys...));
+    try {
+      std::apply(
+          [&new_value](auto&&... constructor_args_tuple) {
+            new_value->assign(std::forward<decltype(constructor_args_tuple)>(constructor_args_tuple)...);
+          },
+          std::invoke(resolver_, keys...));
+    } catch (...) {
+      new_value->assign_error(std::current_exception());
+    }
+  }
   self->link(hash, new_value);
   return new_value;
 }

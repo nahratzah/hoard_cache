@@ -1,9 +1,12 @@
 #include <libhoard/cache.h>
+#include <libhoard/resolver_policy.h>
 
 #include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <tuple>
+
+constexpr bool use_fast_fibonacci = false; // use slow algorithm
 
 struct fib_resolver {
   auto operator()(std::uint32_t v) const -> std::tuple<std::uintmax_t>;
@@ -12,17 +15,28 @@ struct fib_resolver {
 using fib_cache_type = libhoard::cache<std::uint32_t, std::uintmax_t, libhoard::resolver_policy<fib_resolver>>;
 
 inline auto fib_resolver::operator()(std::uint32_t v) const -> std::tuple<std::uintmax_t> {
-  std::uintmax_t a = 0, b = 1;
-  for (std::uint32_t i = 0; i < v; ++i) {
-    std::tie(a, b) = std::make_tuple(b, a + b);
+  if constexpr(use_fast_fibonacci) {
+    std::uintmax_t a = 0, b = 1;
+    for (std::uint32_t i = 0; i < v; ++i) {
+      std::tie(a, b) = std::make_tuple(b, a + b);
 
-    if (b < a) { // overflow
-      std::ostringstream oss;
-      oss << "fibonacci(" << v << ") too large for uintmax_t";
-      throw std::range_error(std::move(oss).str());
+      if (b < a) { // overflow
+        std::ostringstream oss;
+        oss << "fibonacci(" << v << ") too large for uintmax_t";
+        throw std::range_error(std::move(oss).str());
+      }
+    }
+    return std::make_tuple(b);
+  } else {
+    // Slow algorithm. Uses recursion.
+    switch (v) {
+      default:
+        return std::get<0>((*this)(v - 2u)) + std::get<0>((*this)(v - 1u));
+      case 0:
+      case 1:
+        return std::make_tuple(1);
     }
   }
-  return std::make_tuple(b);
 }
 
 fib_cache_type fib_cache = fib_cache_type(libhoard::resolver_policy<fib_resolver>());
@@ -52,12 +66,14 @@ inline void example_lookup(std::uint32_t v) {
 }
 
 int main() {
+  constexpr std::uint32_t highest_input = (use_fast_fibonacci ? 90 : 40);
+
   std::cout << "with empty cache:" << std::endl;
-  for (int i = 0; i <= 90; ++i) example_lookup(i);
-  example_lookup(200);
+  for (int i = 0; i <= highest_input; ++i) example_lookup(i);
+  if constexpr(use_fast_fibonacci) example_lookup(200);
 
   std::cout << "------------------------------------------------------------------------\n";
   std::cout << "with primed cache:" << std::endl;
-  for (int i = 0; i <= 90; ++i) example_lookup(i);
-  example_lookup(200);
+  for (int i = 0; i <= highest_input; ++i) example_lookup(i);
+  if constexpr(use_fast_fibonacci) example_lookup(200);
 }

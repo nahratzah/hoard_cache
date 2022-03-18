@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <chrono>
 
 #include "expire_at_policy.h"

@@ -17,14 +17,14 @@ namespace libhoard {
 
 template<typename KeyType, typename T, typename... Policies>
 class cache
-: public detail::cache_get<cache<KeyType, T, Policies...>, detail::hashtable<KeyType, T, int, Policies...>>,
-  public detail::cache_base_from_policies<cache<KeyType, T, Policies...>, detail::hashtable<KeyType, T, int, Policies...>>
+: public detail::cache_get<cache<KeyType, T, Policies...>, detail::hashtable<KeyType, T, Policies...>>,
+  public detail::cache_base_from_policies<cache<KeyType, T, Policies...>, detail::hashtable<KeyType, T, Policies...>>
 {
   template<typename Impl, typename HashTableType> friend class detail::cache_get_impl;
   template<typename Tag, typename Cache, typename HashTable> friend class detail::cache_base;
 
   private:
-  using hashtable_type = detail::hashtable<KeyType, T, int, Policies...>;
+  using hashtable_type = detail::hashtable<KeyType, T, Policies...>;
 
   public:
   template<typename... Args>

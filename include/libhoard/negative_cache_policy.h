@@ -14,7 +14,7 @@ class negative_cache_policy {
   class value_base_impl {
     protected:
     template<typename Table>
-    explicit value_base_impl(const Table& table) noexcept {}
+    explicit value_base_impl([[maybe_unused]] const Table& table) noexcept {}
 
     ~value_base_impl() noexcept = default;
   };

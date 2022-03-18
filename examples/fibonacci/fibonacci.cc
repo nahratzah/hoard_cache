@@ -48,7 +48,7 @@ void example_lookup(std::uint32_t v) {
   try {
     const auto v_fib = fib_cache.get(v);
     std::chrono::duration<double, std::micro> lookup_duration = std::chrono::steady_clock::now() - b;
-    std::cout << "fibonacci(" << std::setw(3) << v << ") = " << std::setw(9) << v_fib <<
+    std::cout << "fibonacci(" << std::setw(3) << v << ") = " << std::setw(19) << v_fib <<
         " (lookup took " << std::fixed << std::setprecision(3) << std::setw(11) << lookup_duration.count() << " microseconds)" << std::endl;
   } catch (const std::exception& ex) {
     std::cerr << "error looking up fibonacci(" << v << "): " << ex.what() << std::endl;

@@ -51,20 +51,20 @@ SUITE(asio_refresh_policy) {
     typename asio::steady_timer::rebind_executor<asio::io_context::executor_type>::other delay(io_context.get_executor());
 
     cache.async_get(
-        [&call_count, &delay, this](std::string v, int err) {
+        [&call_count, &delay, this](std::string v, std::exception_ptr err) {
           ++call_count;
           CHECK_EQUAL("xxx", v);
-          CHECK_EQUAL(0, err);
+          CHECK(err == nullptr);
 
           delay.expires_after(1s + 500ms);
           delay.async_wait(
               [&call_count, this](const auto& err) {
                 if (err) return;
                 this->cache.async_get(
-                    [&call_count](std::string v, int err) {
+                    [&call_count](std::string v, std::exception_ptr err) {
                       ++call_count;
                       CHECK_EQUAL("yyy", v);
-                      CHECK_EQUAL(0, err);
+                      CHECK(err == nullptr);
                     },
                     3);
               });
@@ -134,20 +134,20 @@ SUITE(asio_refresh_fn_policy) {
     typename asio::steady_timer::rebind_executor<asio::io_context::executor_type>::other delay(io_context.get_executor());
 
     cache.async_get(
-        [&call_count, &delay, this](std::string v, int err) {
+        [&call_count, &delay, this](std::string v, std::exception_ptr err) {
           ++call_count;
           CHECK_EQUAL("xxx", v);
-          CHECK_EQUAL(0, err);
+          CHECK(err == nullptr);
 
           delay.expires_after(1s + 500ms);
           delay.async_wait(
               [&call_count, this](const auto& err) {
                 if (err) return;
                 this->cache.async_get(
-                    [&call_count](std::string v, int err) {
+                    [&call_count](std::string v, std::exception_ptr err) {
                       ++call_count;
                       CHECK_EQUAL("yyy", v);
-                      CHECK_EQUAL(0, err);
+                      CHECK(err == nullptr);
                     },
                     3);
               });

@@ -54,9 +54,7 @@ void example_lookup(std::uint32_t v) {
           } else if constexpr(std::is_same_v<std::uintmax_t, v_type>) {
             return v;
           } else {
-            std::ostringstream oss;
-            oss << "error code " << v << " result";
-            throw std::runtime_error(std::move(oss).str());
+            rethrow_exception(v);
           }
         },
         fib_cache.get(v));

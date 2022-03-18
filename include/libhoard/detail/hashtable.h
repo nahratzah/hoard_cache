@@ -23,6 +23,7 @@
 #include "../thread_safe_policy.h"
 #include "../thread_unsafe_policy.h"
 #include "../resolver_policy.h"
+#include "../error_policy.h"
 
 namespace libhoard::detail {
 
@@ -88,6 +89,17 @@ struct has_policy_removal_check_
 
 template<typename T>
 struct has_policy_removal_check_<T, std::void_t<decltype(std::declval<T>().policy_removal_check_())>>
+: std::true_type
+{};
+
+
+template<typename T>
+struct has_error_policy_
+: std::false_type
+{};
+
+template<typename ErrorType>
+struct has_error_policy_<error_policy<ErrorType>>
 : std::true_type
 {};
 
@@ -185,8 +197,6 @@ struct hashtable_helper_ {
       type_list<>,
       type_list<allocator_policy>>;
 
-  using mapper = mapped_value<T, typename allocator_policy::allocator_type, Error>;
-
   ///\brief Figure out what dependency policies to pull in.
   ///\details
   ///Takes the dependencies type_list from the \p Policies.
@@ -203,13 +213,23 @@ struct hashtable_helper_ {
       type_list<>,
       type_list<thread_safe_policy>>;
 
+  static inline constexpr bool has_error_policy = type_list<Policies...>::template extend_t<policy_dependencies>::template transform_t<has_error_policy_>::template apply_t<std::disjunction>::value;
+  using maybe_extra_error_policies = std::conditional_t<
+      has_error_policy,
+      type_list<>,
+      type_list<error_policy<>>>;
+
   using all_policies = typename type_list<>::extend_t<
       maybe_extra_mutex_policies,
       maybe_extra_allocator_policy,
       maybe_default_equal,
       maybe_default_hash,
+      maybe_extra_error_policies,
       policy_dependencies,
       type_list<Policies...>>;
+
+  using error_policy_type = typename all_policies::template filter_t<has_error_policy_>::template apply_t<select_single_element_t>;
+  using mapper = mapped_value<T, typename allocator_policy::allocator_type, typename error_policy_type::error_type>;
 
   ///\brief List of types that the value type must inherit from according to policies.
   using vt_base_types = typename all_policies::template transform_t<figure_out_hashtable_value_base_>::template remove_all_t<void>;

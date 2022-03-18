@@ -91,7 +91,7 @@ SUITE(async_resolver_policy) {
       template<typename CallbackPtr>
       auto operator()(const CallbackPtr& callback_ptr, int n) const -> void {
         if (self->error) {
-          callback_ptr->assign_error(1);
+          callback_ptr->assign_error(self->error);
           self->error = nullptr;
         } else {
           callback_ptr->assign(n, 'x');

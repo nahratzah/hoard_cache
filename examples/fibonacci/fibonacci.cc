@@ -61,19 +61,19 @@ int main() {
   constexpr std::uint32_t highest_input = (use_fast_fibonacci ? 90 : 40);
 
   std::cout << "with empty cache:" << std::endl;
-  for (int i = 0; i <= highest_input; ++i)
+  for (std::uint32_t i = 0; i <= highest_input; ++i)
     example_lookup(i);
   if constexpr(use_fast_fibonacci) {
-    for (int i = 100; i <= 120; ++i)
+    for (std::uint32_t i = 100; i <= 120; ++i)
       example_lookup(i);
   }
 
   std::cout << "------------------------------------------------------------------------\n";
   std::cout << "with primed cache:" << std::endl;
-  for (int i = 0; i <= highest_input; ++i)
+  for (std::uint32_t i = 0; i <= highest_input; ++i)
     example_lookup(i);
   if constexpr(use_fast_fibonacci) {
-    for (int i = 100; i <= 120; ++i)
+    for (std::uint32_t i = 100; i <= 120; ++i)
       example_lookup(i);
   }
 }

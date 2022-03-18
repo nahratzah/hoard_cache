@@ -127,8 +127,8 @@ libhoard::cache<
 Now, if a value isn't present, it'll invoke the function. :)
 
 ```
-c.get(5); // std::optional("5")
-c.get(100); // std::optional("100")
+c.get(5); // std::string("5")
+c.get(100); // std::string("100")
 ```
 
 ## Installing an Async Resolver
@@ -166,7 +166,7 @@ If another lookup for the same key arrives, it'll share the existing lookup.
 
 When using an async resolver, you'll also need to perform an asyc lookup:
 ```
-using error_type = int; // XXX haven't made a policy to control errors yet
+using error_type = std::exception_ptr; // The error type is controlled using the `libhoard::error_policy` policy.
 
 std::future<std::variant<mapped_type, error_type>> future_value = cache.get(3);
 future_value.get(); // std::variant(std::in_place_index<0>, "3")

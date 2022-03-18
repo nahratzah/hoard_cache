@@ -3,6 +3,7 @@
 #include <libhoard/thread_unsafe_policy.h>
 
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <tuple>
@@ -42,7 +43,7 @@ inline auto fib_resolver::operator()(std::uint32_t v) const -> std::tuple<std::u
 
 fib_cache_type fib_cache = fib_cache_type(libhoard::resolver_policy<fib_resolver>());
 
-inline void example_lookup(std::uint32_t v) {
+void example_lookup(std::uint32_t v) {
   const auto b = std::chrono::steady_clock::now();
   try {
     std::get<std::uintmax_t>(fib_cache.get(v));
@@ -60,7 +61,8 @@ inline void example_lookup(std::uint32_t v) {
         },
         fib_cache.get(v));
     std::chrono::duration<double, std::micro> lookup_duration = std::chrono::steady_clock::now() - b;
-    std::cout << "fibonacci(" << v << ") = " << v_fib << " (lookup took " << lookup_duration.count() << " microseconds)" << std::endl;
+    std::cout << "fibonacci(" << std::setw(3) << v << ") = " << std::setw(9) << v_fib <<
+        " (lookup took " << std::fixed << std::setprecision(3) << std::setw(11) << lookup_duration.count() << " microseconds)" << std::endl;
   } catch (const std::exception& ex) {
     std::cerr << "error looking up fibonacci(" << v << "): " << ex.what() << std::endl;
   }

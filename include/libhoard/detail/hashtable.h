@@ -201,7 +201,7 @@ struct hashtable_helper_ {
   using maybe_extra_mutex_policies = std::conditional_t<
       has_thread_safe_policy,
       type_list<>,
-      type_list<thread_unsafe_policy>>;
+      type_list<thread_safe_policy>>;
 
   using all_policies = typename type_list<>::extend_t<
       maybe_extra_mutex_policies,

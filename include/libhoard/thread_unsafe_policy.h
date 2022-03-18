@@ -1,6 +1,6 @@
 #pragma once
 
-namespace libhoard::detail {
+namespace libhoard {
 
 
 /**

@@ -1,5 +1,6 @@
 #include <libhoard/cache.h>
 #include <libhoard/resolver_policy.h>
+#include <libhoard/thread_unsafe_policy.h>
 
 #include <cstdint>
 #include <iostream>
@@ -12,7 +13,7 @@ struct fib_resolver {
   auto operator()(std::uint32_t v) const -> std::tuple<std::uintmax_t>;
 };
 
-using fib_cache_type = libhoard::cache<std::uint32_t, std::uintmax_t, libhoard::resolver_policy<fib_resolver>>;
+using fib_cache_type = libhoard::cache<std::uint32_t, std::uintmax_t, libhoard::resolver_policy<fib_resolver>, libhoard::thread_unsafe_policy>;
 
 inline auto fib_resolver::operator()(std::uint32_t v) const -> std::tuple<std::uintmax_t> {
   if constexpr(use_fast_fibonacci) {

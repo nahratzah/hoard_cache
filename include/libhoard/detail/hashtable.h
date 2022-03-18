@@ -16,12 +16,12 @@
 #include "meta.h"
 #include "traits.h"
 #include "refcount.h"
-#include "thread_unsafe_policy.h"
 #include "value_type.h"
 #include "../allocator.h"
 #include "../equal.h"
 #include "../hash.h"
 #include "../thread_safe_policy.h"
+#include "../thread_unsafe_policy.h"
 #include "../resolver_policy.h"
 
 namespace libhoard::detail {

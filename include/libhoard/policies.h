@@ -5,6 +5,7 @@
 #include "max_size_policy.h"
 #include "shared_from_this_policy.h"
 #include "thread_safe_policy.h"
+#include "thread_unsafe_policy.h"
 #include "weaken_policy.h"
 #include "resolver_policy.h"
 #include "expire_at_policy.h"

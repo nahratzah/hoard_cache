@@ -20,6 +20,8 @@ template<typename Functor>
 class resolver_policy {
   public:
   template<typename HashTable, typename ValueType, typename Allocator> class table_base;
+  template<typename Impl, typename HashTableType>
+  using add_cache_base = detail::cache_base<resolver_policy, Impl, HashTableType>;
 
   resolver_policy();
   explicit resolver_policy(Functor resolver);
@@ -80,6 +82,22 @@ class async_resolver_policy<Functor>::table_base {
 } /* namespace libhoard */
 
 namespace libhoard::detail {
+
+
+template<typename Functor, typename Impl, typename HashTableType>
+class cache_base<resolver_policy<Functor>, Impl, HashTableType> {
+  protected:
+  cache_base() noexcept = default;
+  cache_base(const cache_base&) noexcept = default;
+  cache_base(cache_base&&) noexcept = default;
+  ~cache_base() noexcept = default;
+  auto operator=(const cache_base&) noexcept -> cache_base& = default;
+  auto operator=(cache_base&&) noexcept -> cache_base& = default;
+
+  public:
+  template<typename... Keys>
+  auto get(const Keys&... keys) -> typename HashTableType::mapped_type;
+};
 
 
 template<typename Functor, typename Impl, typename HashTableType>

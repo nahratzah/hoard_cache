@@ -23,11 +23,12 @@
 #include "../thread_safe_policy.h"
 #include "../thread_unsafe_policy.h"
 #include "../resolver_policy.h"
+#include "../error_policy.h"
 
 namespace libhoard::detail {
 
 
-template<typename KeyType, typename T, typename Error, typename... Policies>
+template<typename KeyType, typename T, typename... Policies>
 class hashtable;
 
 
@@ -88,6 +89,17 @@ struct has_policy_removal_check_
 
 template<typename T>
 struct has_policy_removal_check_<T, std::void_t<decltype(std::declval<T>().policy_removal_check_())>>
+: std::true_type
+{};
+
+
+template<typename T>
+struct has_error_policy_
+: std::false_type
+{};
+
+template<typename ErrorType>
+struct has_error_policy_<error_policy<ErrorType>>
 : std::true_type
 {};
 
@@ -156,7 +168,7 @@ class hashtable_policy_container
 };
 
 
-template<typename KeyType, typename T, typename Error, typename... Policies>
+template<typename KeyType, typename T, typename... Policies>
 struct hashtable_helper_ {
   static inline constexpr bool is_identity_map = std::is_same_v<identity_t, KeyType>;
   static inline constexpr bool has_equal_policy = std::disjunction_v<has_equal<Policies>...>;
@@ -185,8 +197,6 @@ struct hashtable_helper_ {
       type_list<>,
       type_list<allocator_policy>>;
 
-  using mapper = mapped_value<T, typename allocator_policy::allocator_type, Error>;
-
   ///\brief Figure out what dependency policies to pull in.
   ///\details
   ///Takes the dependencies type_list from the \p Policies.
@@ -203,13 +213,23 @@ struct hashtable_helper_ {
       type_list<>,
       type_list<thread_safe_policy>>;
 
+  static inline constexpr bool has_error_policy = type_list<Policies...>::template extend_t<policy_dependencies>::template transform_t<has_error_policy_>::template apply_t<std::disjunction>::value;
+  using maybe_extra_error_policies = std::conditional_t<
+      has_error_policy,
+      type_list<>,
+      type_list<error_policy<>>>;
+
   using all_policies = typename type_list<>::extend_t<
       maybe_extra_mutex_policies,
       maybe_extra_allocator_policy,
       maybe_default_equal,
       maybe_default_hash,
+      maybe_extra_error_policies,
       policy_dependencies,
       type_list<Policies...>>;
+
+  using error_policy_type = typename all_policies::template filter_t<has_error_policy_>::template apply_t<select_single_element_t>;
+  using mapper = mapped_value<T, typename allocator_policy::allocator_type, typename error_policy_type::error_type>;
 
   ///\brief List of types that the value type must inherit from according to policies.
   using vt_base_types = typename all_policies::template transform_t<figure_out_hashtable_value_base_>::template remove_all_t<void>;
@@ -229,7 +249,7 @@ struct hashtable_helper_ {
 
   ///\brief Helper to figure out table base.
   template<typename Policy>
-  using bound_figure_out_hashtable_table_base_ = figure_out_hashtable_table_base_<Policy, hashtable<KeyType, T, Error, Policies...>, value_type, allocator_type>;
+  using bound_figure_out_hashtable_table_base_ = figure_out_hashtable_table_base_<Policy, hashtable<KeyType, T, Policies...>, value_type, allocator_type>;
   ///\brief List of types that the hashtable must derive from according to policies.
   using ht_base_types = typename all_policies::template transform_t<bound_figure_out_hashtable_table_base_>::template remove_all_t<void>;
   ///\brief Type that derives from ht_base_types.
@@ -242,9 +262,9 @@ struct hashtable_helper_ {
 };
 
 
-template<typename KeyType, typename T, typename Error, typename... Policies>
-class hashtable_helper_<KeyType, T, Error, Policies...>::iterator {
-  template<typename HTKeyType, typename HTMappedType, typename HTError, typename... HTPolicies> friend class hashtable;
+template<typename KeyType, typename T, typename... Policies>
+class hashtable_helper_<KeyType, T, Policies...>::iterator {
+  template<typename HTKeyType, typename HTMappedType, typename... HTPolicies> friend class hashtable;
   friend hashtable_helper_::const_iterator;
 
   public:
@@ -274,9 +294,9 @@ class hashtable_helper_<KeyType, T, Error, Policies...>::iterator {
 };
 
 
-template<typename KeyType, typename T, typename Error, typename... Policies>
-class hashtable_helper_<KeyType, T, Error, Policies...>::const_iterator {
-  template<typename HTKeyType, typename HTMappedType, typename HTError, typename... HTPolicies> friend class hashtable;
+template<typename KeyType, typename T, typename... Policies>
+class hashtable_helper_<KeyType, T, Policies...>::const_iterator {
+  template<typename HTKeyType, typename HTMappedType, typename... HTPolicies> friend class hashtable;
   friend hashtable_helper_::iterator;
 
   public:
@@ -307,8 +327,8 @@ class hashtable_helper_<KeyType, T, Error, Policies...>::const_iterator {
 };
 
 
-template<typename KeyType, typename T, typename Error, typename... Policies>
-class hashtable_helper_<KeyType, T, Error, Policies...>::range {
+template<typename KeyType, typename T, typename... Policies>
+class hashtable_helper_<KeyType, T, Policies...>::range {
   friend hashtable_helper_::const_range;
 
   public:
@@ -326,8 +346,8 @@ class hashtable_helper_<KeyType, T, Error, Policies...>::range {
 };
 
 
-template<typename KeyType, typename T, typename Error, typename... Policies>
-class hashtable_helper_<KeyType, T, Error, Policies...>::const_range {
+template<typename KeyType, typename T, typename... Policies>
+class hashtable_helper_<KeyType, T, Policies...>::const_range {
   friend hashtable_helper_::range;
 
   public:
@@ -353,17 +373,16 @@ class hashtable_helper_<KeyType, T, Error, Policies...>::const_range {
  *
  * \tparam KeyType The type of the key, or identity_t if this is a set.
  * \tparam T The mapped type of the hashtable.
- * \tparam Error The error type of the hashtable.
  * \tparam Policies Additional types that value_type must inherit from.
  */
-template<typename KeyType, typename T, typename Error, typename... Policies>
+template<typename KeyType, typename T, typename... Policies>
 class hashtable
-: private basic_hashtable_allocator_member<typename hashtable_helper_<KeyType, T, Error, Policies...>::allocator_type>,
-  private hashtable_helper_<KeyType, T, Error, Policies...>::bht,
-  public hashtable_helper_<KeyType, T, Error, Policies...>::ht_base
+: private basic_hashtable_allocator_member<typename hashtable_helper_<KeyType, T, Policies...>::allocator_type>,
+  private hashtable_helper_<KeyType, T, Policies...>::bht,
+  public hashtable_helper_<KeyType, T, Policies...>::ht_base
 {
   private:
-  using helper_type = hashtable_helper_<KeyType, T, Error, Policies...>;
+  using helper_type = hashtable_helper_<KeyType, T, Policies...>;
   using bht = typename helper_type::bht;
 
   public:
@@ -551,8 +570,8 @@ class hashtable
 };
 
 
-template<typename KeyType, typename T, typename Error, typename... Policies>
-struct hashtable<KeyType, T, Error, Policies...>::disposer_impl {
+template<typename KeyType, typename T, typename... Policies>
+struct hashtable<KeyType, T, Policies...>::disposer_impl {
   explicit disposer_impl(hashtable& self) noexcept;
   auto operator()(basic_hashtable_element* base_elem) noexcept -> void;
 

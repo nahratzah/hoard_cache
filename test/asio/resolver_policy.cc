@@ -18,12 +18,10 @@ SUITE(asio_resolver_policy) {
       template<typename CallbackPtr>
       auto operator()(const CallbackPtr& callback_ptr, int n) const -> void {
         ++self->resolver_called_count;
-        if (self->error) {
-          callback_ptr->assign_error(*self->error);
-          self->error = nullptr;
-        } else {
+        if (self->error)
+          callback_ptr->assign_error(std::exchange(self->error, nullptr));
+        else
           callback_ptr->assign(n, 'x');
-        }
       }
 
       fixture* self;
@@ -34,17 +32,17 @@ SUITE(asio_resolver_policy) {
 
     int resolver_called_count = 0;
     asio::io_context io_context;
-    std::unique_ptr<int> error; // If set, next callback invocation will install an error.
+    std::exception_ptr error; // If set, next callback invocation will install an error.
     cache_type cache = cache_type(asio_resolver_policy_type(resolver_impl(this), this->io_context.get_executor()));
   };
 
   TEST_FIXTURE(fixture, resolve) {
     int call_count = 0;
     cache.async_get(
-        [&call_count](std::string v, int err) {
+        [&call_count](std::string v, std::exception_ptr err) {
           ++call_count;
           CHECK_EQUAL("xxx", v);
-          CHECK_EQUAL(0, err);
+          CHECK(err == nullptr);
         },
         3);
     io_context.run();
@@ -54,13 +52,14 @@ SUITE(asio_resolver_policy) {
   }
 
   TEST_FIXTURE(fixture, resolve_error) {
-    error = std::make_unique<int>(17);
+    const auto expected_error = std::make_exception_ptr(std::exception());
+    error = expected_error;
     int call_count = 0;
     cache.async_get(
-        [&call_count](std::string v, int err) {
+        [&call_count, expected_error](std::string v, std::exception_ptr err) {
           ++call_count;
           CHECK_EQUAL("", v);
-          CHECK_EQUAL(17, err);
+          CHECK(expected_error == err);
         },
         3);
     io_context.run();
@@ -72,17 +71,17 @@ SUITE(asio_resolver_policy) {
   TEST_FIXTURE(fixture, resolving_the_same_twice_reuses_previous_resolve) {
     int call_count = 0;
     cache.async_get(
-        [&call_count](std::string v, int err) {
+        [&call_count](std::string v, std::exception_ptr err) {
           ++call_count;
           CHECK_EQUAL("xxx", v);
-          CHECK_EQUAL(0, err);
+          CHECK(err == nullptr);
         },
         3);
     cache.async_get(
-        [&call_count](std::string v, int err) {
+        [&call_count](std::string v, std::exception_ptr err) {
           ++call_count;
           CHECK_EQUAL("xxx", v);
-          CHECK_EQUAL(0, err);
+          CHECK(err == nullptr);
         },
         3);
     io_context.run();

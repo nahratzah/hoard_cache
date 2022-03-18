@@ -24,7 +24,7 @@ class cache_get_impl {
   public:
   template<typename... Keys>
   auto get(const Keys&... keys)
-      noexcept(noexcept(std::declval<HashTableType&>().get_if_exists(std::declval<const Keys&>()...)))
+      noexcept(noexcept(std::declval<HashTableType&>().get(std::declval<const Keys&>()...)))
   -> std::conditional_t<
       HashTableType::uses_resolver::value,
       std::variant<std::monostate, typename HashTableType::mapped_type, typename HashTableType::error_type>,

@@ -76,6 +76,28 @@ namespace libhoard::detail {
 
 template<typename Functor, typename Impl, typename HashTableType>
 template<typename... Keys>
+inline auto cache_base<resolver_policy<Functor>, Impl, HashTableType>::get(const Keys&... keys)
+-> typename HashTableType::mapped_type {
+  Impl*const self = static_cast<Impl*>(this);
+  std::lock_guard<HashTableType> lck{ *self->impl_ };
+
+  auto v = self->impl_->get(keys...);
+  switch (v.index()) {
+    default:
+      throw std::logic_error("cache bug: monostate result");
+    case 1:
+      break;
+    case 2:
+      std::rethrow_exception(std::get<2>(v));
+      break;
+  }
+  auto v_value = std::get<1>(std::move(v));
+  return v_value;
+}
+
+
+template<typename Functor, typename Impl, typename HashTableType>
+template<typename... Keys>
 inline auto cache_base<async_resolver_policy<Functor>, Impl, HashTableType>::get(const Keys&... keys)
 -> std::future<std::variant<typename HashTableType::mapped_type, typename HashTableType::error_type>> {
   using variant_type = std::variant<typename HashTableType::mapped_type, typename HashTableType::error_type>;

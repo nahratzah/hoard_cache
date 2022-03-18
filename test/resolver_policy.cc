@@ -36,12 +36,10 @@ SUITE(resolver_policy) {
 
   TEST_FIXTURE(fixture, get) {
     auto three = cache.get(3);
-    CHECK_EQUAL(1u, three.index());
-    CHECK_EQUAL(std::string("xxx"), std::get<1>(three));
+    CHECK_EQUAL(std::string("xxx"), three);
 
     auto four = cache.get(4);
-    CHECK_EQUAL(1u, four.index());
-    CHECK_EQUAL(std::string("xxxx"), std::get<1>(four));
+    CHECK_EQUAL(std::string("xxxx"), four);
   }
 
   TEST_FIXTURE(fixture, async_get) {

@@ -25,23 +25,16 @@ class cache_get_impl {
   template<typename... Keys>
   auto get(const Keys&... keys)
       noexcept(noexcept(std::declval<HashTableType&>().get(std::declval<const Keys&>()...)))
-  -> std::conditional_t<
-      HashTableType::uses_resolver::value,
-      std::variant<std::monostate, typename HashTableType::mapped_type, typename HashTableType::error_type>,
-      std::optional<typename HashTableType::mapped_type>> {
+  -> std::optional<typename HashTableType::mapped_type> {
     Impl*const self = static_cast<Impl*>(this);
     std::lock_guard<HashTableType> lck{ *self->impl_ };
 
     auto v = self->impl_->get(keys...);
-    if constexpr(HashTableType::uses_resolver::value) {
-      return v;
-    } else {
-      switch (v.index()) {
-        default:
-          return std::nullopt;
-        case 1:
-          return std::make_optional(std::get<1>(std::move(v)));
-      }
+    switch (v.index()) {
+      default:
+        return std::nullopt;
+      case 1:
+        return std::make_optional(std::get<1>(std::move(v)));
     }
   }
 };
@@ -61,7 +54,7 @@ class cache_omit_get_impl {
 
 template<typename Impl, typename HashTableImpl>
 using cache_get = std::conditional_t<
-    HashTableImpl::uses_async_resolver::value,
+    HashTableImpl::uses_resolver::value,
     cache_omit_get_impl,
     cache_get_impl<Impl, HashTableImpl>>;
 

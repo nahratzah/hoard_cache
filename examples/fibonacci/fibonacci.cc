@@ -33,7 +33,17 @@ inline auto fib_resolver::operator()(std::uint32_t v) const -> std::tuple<std::u
     // Slow algorithm. Uses recursion.
     switch (v) {
       default:
-        return std::get<0>((*this)(v - 2u)) + std::get<0>((*this)(v - 1u));
+        {
+          auto a = std::get<0>((*this)(v - 2u));
+          auto b = std::get<0>((*this)(v - 1u));
+          auto a_plus_b = a + b;
+          if (a_plus_b < b) { // overflow
+            std::ostringstream oss;
+            oss << "fibonacci(" << v << ") too large for uintmax_t";
+            throw std::range_error(std::move(oss).str());
+          }
+          return a_plus_b;
+        }
       case 0:
       case 1:
         return std::make_tuple(1);

@@ -80,6 +80,7 @@ configure_file(libhoard-config-version.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/libh
 install(FILES libhoard-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/libhoard-config-version.cmake DESTINATION "lib/cmake/libhoard")
 
 add_subdirectory(test)
+add_subdirectory(examples)
 
 find_package(Doxygen COMPONENTS mscgen OPTIONAL_COMPONENTS dot)
 

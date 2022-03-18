@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../negative_cache_policy.h"
+
 namespace libhoard::detail {
 namespace {
 
@@ -113,6 +115,10 @@ inline auto value_type<KeyType, Mapper, BaseTypes...>::expired() const noexcept 
   typename type_list<BaseTypes...>::template apply_t<maybe_apply_for_each_type> functors;
 
   bool is_expired = mapped_.expired();
+  if constexpr(!std::is_base_of_v<negative_cache_policy, value_type>) {
+    if (mapped_.holds_error())
+      is_expired = true;
+  }
   functors(expired_fn(this, &is_expired));
   return is_expired;
 }

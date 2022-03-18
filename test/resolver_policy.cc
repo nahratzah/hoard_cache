@@ -2,9 +2,10 @@
 
 #include <exception>
 #include <future>
+#include <stdexcept>
 #include <string>
-#include <tuple>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include "UnitTest++/UnitTest++.h"
@@ -16,9 +17,17 @@ SUITE(resolver_policy) {
   class fixture {
     public:
     struct resolver_impl {
+      explicit resolver_impl(fixture& self) noexcept
+      : self(&self)
+      {}
+
       auto operator()(int n) const -> std::tuple<std::string::size_type, char> {
+        if (self->error) std::rethrow_exception(std::exchange(self->error, nullptr));
         return std::make_tuple(std::string::size_type(n), 'x');
       }
+
+      private:
+      fixture* self;
     };
 
     static_assert(libhoard::detail::has_resolver<libhoard::resolver_policy<resolver_impl>>::value);
@@ -30,8 +39,9 @@ SUITE(resolver_policy) {
     using hashtable_type = libhoard::detail::hashtable<int, std::string, std::exception_ptr, libhoard::resolver_policy<resolver_impl>>;
     using cache_type = libhoard::cache<int, std::string, libhoard::resolver_policy<resolver_impl>>;
 
-    std::unique_ptr<hashtable_type> hashtable = std::make_unique<hashtable_type>(std::make_tuple(libhoard::resolver_policy<resolver_impl>()));
-    cache_type cache = cache_type(libhoard::resolver_policy<resolver_impl>());
+    std::unique_ptr<hashtable_type> hashtable = std::make_unique<hashtable_type>(std::make_tuple(libhoard::resolver_policy<resolver_impl>(resolver_impl(*this))));
+    cache_type cache = cache_type(libhoard::resolver_policy<resolver_impl>(resolver_impl(*this)));
+    std::exception_ptr error;
   };
 
   TEST_FIXTURE(fixture, get) {
@@ -61,6 +71,31 @@ SUITE(resolver_policy) {
     }
 
     CHECK_EQUAL(std::string("xxx"), three.get());
+  }
+
+  TEST_FIXTURE(fixture, get_does_not_cache_errors) {
+    const auto error_1 = std::make_exception_ptr(std::runtime_error("'error one'"));
+    const auto error_2 = std::make_exception_ptr(std::runtime_error("'error two'"));
+    bool error_one_seen = false, error_two_seen = false;
+
+    error = error_1;
+    try {
+      cache.get(7);
+    } catch (const std::exception& ex) {
+      CHECK_EQUAL("'error one'", ex.what());
+      error_one_seen = true;
+    }
+
+    error = error_2;
+    try {
+      cache.get(7);
+    } catch (const std::exception& ex) {
+      CHECK_EQUAL("'error two'", ex.what());
+      error_two_seen = true;
+    }
+
+    CHECK(error_one_seen);
+    CHECK(error_two_seen);
   }
 }
 

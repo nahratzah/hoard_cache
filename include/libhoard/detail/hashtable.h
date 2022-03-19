@@ -24,6 +24,7 @@
 #include "../thread_unsafe_policy.h"
 #include "../resolver_policy.h"
 #include "../error_policy.h"
+#include "../pointer_policy.h"
 
 namespace libhoard::detail {
 
@@ -104,6 +105,17 @@ struct has_error_policy_<error_policy<ErrorType>>
 {};
 
 
+template<typename T>
+struct is_pointer_policy_
+: std::false_type
+{};
+
+template<typename WeakPointer, typename MemberPointer>
+struct is_pointer_policy_<pointer_policy<WeakPointer, MemberPointer>>
+: std::true_type
+{};
+
+
 ///\brief Small adapter type to wrap elements that are default constructible.
 template<typename T>
 class hashtable_dfl_constructible_
@@ -168,6 +180,39 @@ class hashtable_policy_container
 };
 
 
+template<typename T, typename PoliciesTypeList, bool HasPointerPolicy>
+struct select_mapper_impl_;
+
+template<typename T, typename PoliciesTypeList>
+struct select_mapper_impl_<T, PoliciesTypeList, false> {
+  using allocator_policy = typename PoliciesTypeList::template filter_t<has_allocator>::template apply_t<select_single_element_t>;
+  using allocator_type = typename allocator_policy::allocator_type;
+
+  using error_policy = typename PoliciesTypeList::template filter_t<has_error_policy_>::template apply_t<select_single_element_t>;
+  using error_type = typename error_policy::error_type;
+
+  using type = mapped_value<T, allocator_type, error_type>;
+};
+
+template<typename T, typename PoliciesTypeList>
+struct select_mapper_impl_<T, PoliciesTypeList, true> {
+  using allocator_policy = typename PoliciesTypeList::template filter_t<has_allocator>::template apply_t<select_single_element_t>;
+  using allocator_type = typename allocator_policy::allocator_type;
+
+  using error_policy = typename PoliciesTypeList::template filter_t<has_error_policy_>::template apply_t<select_single_element_t>;
+  using error_type = typename error_policy::error_type;
+
+  using pointer_policy = typename PoliciesTypeList::template filter_t<is_pointer_policy_>::template apply_t<select_single_element_t>;
+  using weak_pointer = typename pointer_policy::template weak_type<T>;
+  using member_pointer = typename pointer_policy::template member_type<T>;
+
+  using type = mapped_pointer<T, allocator_type, error_type, weak_pointer, member_pointer>;
+};
+
+template<typename T, typename PoliciesTypeList>
+using select_mapper_ = typename select_mapper_impl_<T, PoliciesTypeList, PoliciesTypeList::template transform_t<is_pointer_policy_>::template apply_t<std::disjunction>::value>::type;
+
+
 template<typename KeyType, typename T, typename... Policies>
 struct hashtable_helper_ {
   static inline constexpr bool is_identity_map = std::is_same_v<identity_t, KeyType>;
@@ -229,7 +274,7 @@ struct hashtable_helper_ {
       type_list<Policies...>>;
 
   using error_policy_type = typename all_policies::template filter_t<has_error_policy_>::template apply_t<select_single_element_t>;
-  using mapper = mapped_value<T, typename allocator_policy::allocator_type, typename error_policy_type::error_type>;
+  using mapper = select_mapper_<T, all_policies>;
 
   ///\brief List of types that the value type must inherit from according to policies.
   using vt_base_types = typename all_policies::template transform_t<figure_out_hashtable_value_base_>::template remove_all_t<void>;

@@ -3,23 +3,23 @@
 namespace libhoard {
 
 
-template<typename Clock>
-inline max_age_policy<Clock>::max_age_policy(std::chrono::milliseconds max_age)
+template<typename Clock, bool ExpectValue>
+inline max_age_policy_impl<Clock, ExpectValue>::max_age_policy_impl(std::chrono::milliseconds max_age)
 : max_age(max_age)
 {}
 
 
-template<typename Clock>
+template<typename Clock, bool ExpectValue>
 template<typename HashTable, typename ValueType, typename Allocator>
 template<typename... Args>
-inline max_age_policy<Clock>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc) noexcept
-: max_age_(std::get<max_age_policy>(args).max_age)
+inline max_age_policy_impl<Clock, ExpectValue>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc) noexcept
+: max_age_(std::get<max_age_policy_impl>(args).max_age)
 {}
 
-template<typename Clock>
+template<typename Clock, bool ExpectValue>
 template<typename HashTable, typename ValueType, typename Allocator>
-inline auto max_age_policy<Clock>::table_base<HashTable, ValueType, Allocator>::on_assign_(ValueType* vptr, bool value, [[maybe_unused]] bool assigned_via_callback) noexcept -> void {
-  if (value) { // This policy does not control how long errors are cached for.
+inline auto max_age_policy_impl<Clock, ExpectValue>::table_base<HashTable, ValueType, Allocator>::on_assign_(ValueType* vptr, bool value, [[maybe_unused]] bool assigned_via_callback) noexcept -> void {
+  if (value == ExpectValue) { // ExpectValue is true, means we control how long values are cached. False means we control how long errors are cached.
     vptr->expire_at_policy<Clock>::value_base::expire_at(Clock::now() + max_age_);
     if constexpr(!Clock::is_steady) vptr->expire_at_policy<std::chrono::steady_clock>::value_base::expire_at(std::chrono::steady_clock::now() + max_age_);
   }

@@ -20,6 +20,7 @@ if (UnitTest++_FOUND)
       resolver_policy.cc
       max_age_policy.cc
       refresh_policy.cc
+      # shared_pointer.cc
       test_main.cc)
   target_link_libraries (tests UnitTest++ libhoard)
   target_include_directories(tests PUBLIC ${UTPP_INCLUDE_DIRS})

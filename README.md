@@ -272,9 +272,9 @@ libhoard::cache<
               s << key;
               return s.str();
             }),
-	libhoard::refresh_policy<std::chrono::steady_clock>(
-	    1m, 15m
-	));
+        libhoard::refresh_policy<std::chrono::steady_clock>(
+            1m, 15m
+        ));
 ```
 
 The refresh-delay (`1m` in this example) causes the cache to refresh the value every `1m`.
@@ -285,6 +285,37 @@ If the idle-delay is `0s`, then the cache will keep refreshing indefinitely (or 
 The refresh policy is implemented by running a single thread that initiates resolution.
 It'll work with both synchronous and asynchronous resolution.
 Because the refresh policy requires that the cache is thread-safe, it'll pull in the thread-safe-policy automatically.
+
+## Negative Cache (Caching Errors)
+
+To get the cache to cache errors, we use the error policy.
+
+```
+#include <libhoard/cache.h>
+#include <libhoard/error_policy.h>
+
+libhoard::cache<
+    key_type, mapped_type,
+    libhoard::error_policy<std::exception_ptr> // std::exception_ptr is the default error type and can be omitted
+    > c;
+```
+
+Adding this policy will cache errors, until any of the cache rules decides to remove or expire the value.
+(In this example, since the cache doesn't have any rules regarding expiry or size, the error would be cached forever.)
+
+It is recommended to use the `libhoard::error_max_age_policy` to get errors to only be cached for a limited time.
+```
+#include <libhoard/cache.h>
+#include <libhoard/error_policy.h>
+#include <libhoard/max_age_policy.h>
+
+libhoard::cache<
+    key_type, mapped_type,
+    libhoard::error_policy<std::exception_ptr> // std::exception_ptr is the default error type and can be omitted
+    libhoard::error_max_age_policy<std::chrono::system_clock>
+    > c(libhoard::error_max_age_policy<std::chrono::system_clock>(5m));
+```
+This would cause errors to be cached for at most 5 minutes.
 
 # In Combination with Asio
 

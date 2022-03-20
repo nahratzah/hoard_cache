@@ -102,6 +102,74 @@ libhoard::cache<
     > c;
 ```
 
+## Smart Pointers and Singletons
+
+When using smart pointers (such as [`std::shared_ptr`](https://en.cppreference.com/w/cpp/memory/shared_ptr)) you can set up the cache to use weak pointers when shrinking the cache.
+The advantage is that, as long as your weak-pointer element is still strongly referenced elsewhere in the code, the cache will keep returning it.
+
+For example, you could do something like:
+```
+using file_contents_ptr = std::shared_ptr<const std::string>;
+
+struct file_contents_resolver {
+  auto operator()(std::string filename) -> file_contents_ptr {
+    std::ifstream f(filename);
+    std::ostringstream oss;
+    oss << f.rdbuf();
+    return std::make_shared<const std::string>(oss.str());
+  }
+};
+
+using file_cache = libhoard::cache<
+    std::string, file_contents_ptr,
+    libhoard::pointer_policy<>, // tells the cache that we're using shared pointers
+    libhoard::weaken_policy<>,  // tells the cache to use weak_ptr, when shrinking the cache
+    libhoard::max_size_policy,  // tells the cache we'll have a size limit
+    libhoard::resolver_policy<file_contents_resolver> // use the above resolver
+    >;
+
+int main() {
+  file_cache fc(libhoard::max_size_policy(2));
+
+  file_contents_ptr a_txt = fc.get("a.txt");
+
+  // cause a_txt to expire because the cache grows too large
+  fc.get("b.txt");
+  fc.get("b.txt");
+  fc.get("c.txt");
+  fc.get("c.txt");
+
+  // despite having expired a_txt, because it was still referenced in our code,
+  // the entry was preserved in the cache
+  assert(a_txt == fc.get("a.txt");
+}
+```
+
+This behaviour can be used to create singletons.
+Suppose we have a monitoring tool, that needs to keep track of metrics across a large group of machines.
+Each machine has 1000 metrics, and they're all named the same.
+We have 10k machines.
+And each metric name takes up, say, 60 bytes.
+So in total, we would need `60 bytes * 1k * 10k = 600 MB` just to store the metric names.
+
+But if we use a cache instead, we can deduplicate duplicate names:
+```
+using metric_name_cache = libhoard::cache<
+    std::string, std::shared_ptr<std::string>,
+    libhoard::pointer_policy<>,
+    libhoard::weaken_policy<>,
+    libhoard::max_size_policy,
+    libhoard::resolver_policy<std::shared_ptr<const std::string> (*)(std::string)>>;
+
+metric_name_cache metric_names(
+    libhoard::max_size_policy(100),
+    libhoard::resolver_policy<std::shared_ptr<const std::string> (*)(std::string)>>([](std::string s) { return std::make_shared<const std::string>(s); }));
+
+metric_names.get("my_metric_name"); // returns the same std::shared_ptr of "my_metric_name" each time
+```
+
+We changed the `std::string` to a `std::shared_ptr<std::string>`, and now we only need `60 bytes * 1k = 60 kB` of memory.
+
 ## Installing a Resolver
 
 Instead of using `cache::emplace` to insert elements into the cache, you can equip the cache with a resolver function.

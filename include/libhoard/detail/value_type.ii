@@ -33,7 +33,7 @@ template<typename HashTable, typename... Args, std::size_t... KeyIndices>
 inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, [[maybe_unused]] std::piecewise_construct_t pc, std::tuple<Args...> key, [[maybe_unused]] std::index_sequence<KeyIndices...> key_indices)
 : BaseTypes(table)...,
   key_(std::get<KeyIndices>(std::move(key))...),
-  mapped_(table.get_allocator())
+  mapped_(table, table.get_allocator())
 {}
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
@@ -41,7 +41,7 @@ template<typename HashTable, typename... Args, std::size_t... KeyIndices>
 inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> key, [[maybe_unused]] std::index_sequence<KeyIndices...> key_indices, error_type ex)
 : BaseTypes(table)...,
   key_(std::get<KeyIndices>(std::move(key))...),
-  mapped_(pc, std::move(ex))
+  mapped_(table, pc, std::move(ex))
 {}
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
@@ -49,7 +49,7 @@ template<typename HashTable, typename... Args, typename... MappedArgs, std::size
 inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> key, [[maybe_unused]] std::index_sequence<KeyIndices...> key_indices, std::tuple<MappedArgs...> mapped_args)
 : BaseTypes(table)...,
   key_(std::get<KeyIndices>(std::move(key))...),
-  mapped_(pc, std::move(mapped_args))
+  mapped_(table, pc, std::move(mapped_args))
 {}
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
@@ -57,7 +57,7 @@ template<typename HashTable>
 inline value_type<KeyType, Mapper, BaseTypes...>::value_type(const HashTable& table, key_type key)
 : BaseTypes(table)...,
   key_(std::move(key)),
-  mapped_(table.get_allocator())
+  mapped_(table, table.get_allocator())
 {}
 
 template<typename KeyType, typename Mapper, typename... BaseTypes>
@@ -179,14 +179,14 @@ template<typename Mapper, typename... BaseTypes>
 template<typename HashTable>
 inline value_type<identity_t, Mapper, BaseTypes...>::value_type(const HashTable& table, key_type key)
 : BaseTypes(table)...,
-  mapped_(std::piecewise_construct, std::forward_as_tuple(std::move(key)))
+  mapped_(table, std::piecewise_construct, std::forward_as_tuple(std::move(key)))
 {}
 
 template<typename Mapper, typename... BaseTypes>
 template<typename HashTable, typename... Args>
 inline value_type<identity_t, Mapper, BaseTypes...>::value_type(const HashTable& table, std::piecewise_construct_t pc, std::tuple<Args...> args)
 : BaseTypes(table)...,
-  mapped_(pc, std::move(args))
+  mapped_(table, pc, std::move(args))
 {}
 
 template<typename Mapper, typename... BaseTypes>

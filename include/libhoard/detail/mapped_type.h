@@ -28,15 +28,17 @@ class mapped_value {
   private:
   using variant_type = std::variant<pending_type, mapped_type, expired_t, error_type>;
 
-  template<typename... Args, std::size_t... Indices>
-  mapped_value(std::piecewise_construct_t pc, std::tuple<Args...> args, std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<T, Args...>);
+  template<typename Table, typename... Args, std::size_t... Indices>
+  mapped_value(const Table& table, std::piecewise_construct_t pc, std::tuple<Args...> args, std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<T, Args...>);
 
   public:
-  explicit mapped_value(allocator_type allocator = allocator_type());
+  template<typename Table>
+  explicit mapped_value(const Table& table, allocator_type allocator = allocator_type());
   mapped_value(const mapped_value&) = delete;
-  mapped_value(std::piecewise_construct_t pc, error_type ex) noexcept(std::is_nothrow_move_constructible_v<ErrorType>);
-  template<typename... Args>
-  mapped_value(std::piecewise_construct_t pc, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<T, Args...>);
+  template<typename Table>
+  mapped_value(const Table& table, std::piecewise_construct_t pc, error_type ex) noexcept(std::is_nothrow_move_constructible_v<ErrorType>);
+  template<typename Table, typename... Args>
+  mapped_value(const Table& table, std::piecewise_construct_t pc, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<T, Args...>);
 
   template<typename... Args>
   auto assign(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> void;
@@ -61,7 +63,7 @@ class mapped_value {
 };
 
 
-template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer = typename Pointer::weak_type, typename MemberPointer = Pointer>
+template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer, typename MPCA>
 class mapped_pointer {
   public:
   using mapped_type = Pointer;
@@ -75,27 +77,29 @@ class mapped_pointer {
       std::is_nothrow_default_constructible_v<WeakPointer>,
       std::variant<pending_type, MemberPointer, WeakPointer, error_type>,
       std::variant<pending_type, MemberPointer, WeakPointer, error_type, expired_t>>;
+  struct mpca_tag {};
 
-  template<typename... Args, std::size_t... Indices>
-  mapped_pointer(std::piecewise_construct_t pc, std::tuple<Args...> args, std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
+  template<typename Table, typename... Args, std::size_t... Indices>
+  mapped_pointer(const Table& table, mpca_tag tag, std::tuple<Args...> args, std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
+
+  template<typename Table, typename... Args>
+  mapped_pointer(const Table& table, mpca_tag tag, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
 
   public:
-  explicit mapped_pointer(allocator_type allocator = allocator_type());
+  template<typename Table>
+  explicit mapped_pointer(const Table& table, allocator_type allocator = allocator_type());
   mapped_pointer(const mapped_pointer&) = delete;
-  mapped_pointer(std::piecewise_construct_t pc, error_type ex) noexcept(std::is_nothrow_move_constructible_v<ErrorType>);
-  template<typename... Args>
-  mapped_pointer(std::piecewise_construct_t pc, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
+  template<typename Table>
+  mapped_pointer(const Table& table, std::piecewise_construct_t pc, error_type ex) noexcept(std::is_nothrow_move_constructible_v<ErrorType>);
+  template<typename Table, typename... Args>
+  mapped_pointer(const Table& table, std::piecewise_construct_t pc, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
 
   template<typename... Args>
   auto assign(Args&&... args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...> && std::is_nothrow_constructible_v<Pointer, MemberPointer> && std::is_nothrow_constructible_v<WeakPointer, Pointer>) -> void;
   auto assign_error(error_type ex) noexcept -> void;
   auto weaken() noexcept -> void;
 
-  /**
-   * \tparam PointerFun A function that takes a Pointer, and returns a tuple of constructor arguments for MemberPointer.
-   */
-  template<typename PointerFun = identity_fn>
-  auto strengthen(PointerFun&& pointer_fun = PointerFun()) -> bool;
+  auto strengthen() -> bool;
 
   auto expired() const noexcept -> bool;
   auto pending() const noexcept -> bool;
@@ -111,6 +115,7 @@ class mapped_pointer {
   auto matches(function_ref<bool(const mapped_type&)> matcher) const -> bool;
 
   private:
+  MPCA mpca_;
   variant_type value_;
 };
 

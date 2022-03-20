@@ -306,13 +306,15 @@ using mapped_type = std::string;
 struct resolver {
   template<typename Callback>
   void operator()(std::shared_ptr<Callback> callback, int key) {
-    std::async(std::launch_async,
+    executor.post(
         [callback, key]() {
           std::ostringstream s;
           s << key;
-          callback->assign(s.str());
+          callback->assign(s.str()); // fills in the cache.
         });
   }
+
+  asio::system_executor executor;
 };
 
 asio::io_context ioctx;

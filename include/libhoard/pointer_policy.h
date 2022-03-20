@@ -41,13 +41,8 @@ struct member_pointer_check_<Pointer, void>
 
 struct default_member_pointer_constructor_args {
   template<typename Pointer>
-  auto operator()(const Pointer& ptr) const noexcept -> std::tuple<const Pointer&> {
-    return std::tuple<const Pointer&>(ptr);
-  }
-
-  template<typename Pointer>
-  auto operator()(Pointer&& ptr) const noexcept -> std::tuple<Pointer&&> {
-    return std::tuple<Pointer&&>(std::move(ptr));
+  auto operator()(Pointer&& ptr) const noexcept -> std::tuple<std::add_rvalue_reference_t<Pointer>> {
+    return std::tuple<std::add_rvalue_reference_t<Pointer>>(std::forward<Pointer>(ptr));
   }
 };
 
@@ -161,8 +156,13 @@ class pointer_policy<WeakPointer, MemberPointer, MemberPointerConstructorArgs>::
   {}
 
   template<typename Pointer>
-  auto strengthen_args_(Pointer&& pointer) -> decltype(std::invoke(std::declval<const MemberPointerConstructorArgs&>(), std::declval<const Pointer&>())) {
+  auto strengthen_args_(Pointer&& pointer) -> decltype(std::invoke(std::declval<const MemberPointerConstructorArgs&>(), std::declval<Pointer>())) {
     return std::invoke(mpca_fn_, std::forward<Pointer>(pointer));
+  }
+
+  template<typename Pointer>
+  static auto mpca_args_static_(const table_base_impl& table, Pointer&& pointer) -> decltype(std::invoke(std::declval<const MemberPointerConstructorArgs&>(), std::declval<Pointer>())) {
+    return std::invoke(table.mpca_fn_, std::forward<Pointer>(pointer));
   }
 
   private:

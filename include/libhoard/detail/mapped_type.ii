@@ -181,9 +181,15 @@ inline auto mapped_value<T, Allocator, ErrorType>::matches(function_ref<bool(con
 
 template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer, typename MPCA>
 template<typename Table, typename... Args, std::size_t... Indices>
-inline mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer, MPCA>::mapped_pointer(const Table& table, [[maybe_unused]] std::piecewise_construct_t pc, std::tuple<Args...> args, [[maybe_unused]] std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>)
+inline mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer, MPCA>::mapped_pointer(const Table& table, [[maybe_unused]] mpca_tag pc, std::tuple<Args...> args, [[maybe_unused]] std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>)
 : mpca_(table),
   value_(std::in_place_index<1>, std::get<Indices>(std::move(args))...)
+{}
+
+template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer, typename MPCA>
+template<typename Table, typename... Args>
+inline mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer, MPCA>::mapped_pointer(const Table& table, mpca_tag pc, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>)
+: mapped_pointer(table, pc, std::move(args), std::index_sequence_for<Args...>())
 {}
 
 template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer, typename MPCA>
@@ -202,15 +208,27 @@ inline mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer,
 
 template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer, typename MPCA>
 template<typename Table, typename... Args>
-inline mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer, MPCA>::mapped_pointer(const Table& table, std::piecewise_construct_t pc, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>)
-: mapped_pointer(table, pc, std::move(args), std::index_sequence_for<Args...>())
+inline mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer, MPCA>::mapped_pointer(const Table& table, [[maybe_unused]] std::piecewise_construct_t pc, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>)
+: mapped_pointer(
+    table, mpca_tag(),
+    std::apply(
+        [&table](auto&&... args) {
+          return MPCA::mpca_args_static_(table, std::forward<decltype(args)>(args)...);
+        },
+        std::move(args)))
 {}
 
 template<typename Pointer, typename Allocator, typename ErrorType, typename WeakPointer, typename MemberPointer, typename MPCA>
 template<typename... Args>
 inline auto mapped_pointer<Pointer, Allocator, ErrorType, WeakPointer, MemberPointer, MPCA>::assign(Args&&... args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...> && std::is_nothrow_constructible_v<Pointer, MemberPointer> && std::is_nothrow_constructible_v<WeakPointer, Pointer>) -> void {
   pending_type p = std::move(std::get<pending_type>(value_));
-  p.resolve_success(value_.template emplace<1>(std::forward<Args>(args)...));
+  p.resolve_success(
+      std::apply(
+          [this](auto&&... args) -> Pointer {
+            return this->value_.template emplace<1>(std::forward<decltype(args)>(args)...);
+          },
+          mpca_.strengthen_args_(std::forward<Args>(args)...)));
+
   if (p.expired()) {
     if constexpr(std::is_nothrow_default_constructible_v<WeakPointer>)
       value_.template emplace<2>();

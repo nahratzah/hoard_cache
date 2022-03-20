@@ -77,9 +77,13 @@ class mapped_pointer {
       std::is_nothrow_default_constructible_v<WeakPointer>,
       std::variant<pending_type, MemberPointer, WeakPointer, error_type>,
       std::variant<pending_type, MemberPointer, WeakPointer, error_type, expired_t>>;
+  struct mpca_tag {};
 
   template<typename Table, typename... Args, std::size_t... Indices>
-  mapped_pointer(const Table& table, std::piecewise_construct_t pc, std::tuple<Args...> args, std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
+  mapped_pointer(const Table& table, mpca_tag tag, std::tuple<Args...> args, std::index_sequence<Indices...> indices) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
+
+  template<typename Table, typename... Args>
+  mapped_pointer(const Table& table, mpca_tag tag, std::tuple<Args...> args) noexcept(std::is_nothrow_constructible_v<MemberPointer, Args...>);
 
   public:
   template<typename Table>

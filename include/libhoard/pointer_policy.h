@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -38,12 +39,13 @@ struct member_pointer_check_<Pointer, void>
 {};
 
 
-template<typename Pointer>
 struct default_member_pointer_constructor_args {
+  template<typename Pointer>
   auto operator()(const Pointer& ptr) const noexcept -> std::tuple<const Pointer&> {
     return std::tuple<const Pointer&>(ptr);
   }
 
+  template<typename Pointer>
   auto operator()(Pointer&& ptr) const noexcept -> std::tuple<Pointer&&> {
     return std::tuple<Pointer&&>(std::move(ptr));
   }
@@ -82,6 +84,9 @@ inline constexpr bool is_tuple_constructible_v = is_tuple_constructible<T, Tuple
 
 template<typename Pointer, typename MemberPointer, typename MemberPointerConstructorArgs>
 struct member_pointer_constructor_args {
+  static_assert(!std::is_same_v<MemberPointerConstructorArgs, default_member_pointer_constructor_args> ||
+      std::is_constructible_v<MemberPointer, Pointer&&>,
+      "member-pointer must be constructible from pointer");
   static_assert(std::is_invocable_v<MemberPointerConstructorArgs&, Pointer>,
       "the functor must accept a pointer argument");
   static_assert(std::is_invocable_v<MemberPointerConstructorArgs&, Pointer> ?
@@ -97,19 +102,11 @@ struct member_pointer_constructor_args {
   using type = MemberPointerConstructorArgs;
 };
 
-template<typename Pointer, typename MemberPointer>
-struct member_pointer_constructor_args<Pointer, MemberPointer, void>
-: member_pointer_constructor_args<Pointer, MemberPointer, default_member_pointer_constructor_args<Pointer>>
-{
-  static_assert(std::is_constructible_v<MemberPointer, Pointer&&>,
-      "member-pointer must be constructible from pointer");
-};
-
 
 } /* namespace libhoard::detail */
 
 
-template<typename WeakPointer = void, typename MemberPointer = void, typename MemberPointerConstructorArgs = void>
+template<typename WeakPointer = void, typename MemberPointer = void, typename MemberPointerConstructorArgs = detail::default_member_pointer_constructor_args>
 class pointer_policy {
   public:
   // Contains the resolved weak-pointer type.
@@ -125,6 +122,51 @@ class pointer_policy {
   // Figure out the constructor arguments for the member-pointer.
   template<typename MappedPointer>
   using member_pointer_constructor_args = typename detail::member_pointer_constructor_args<MappedPointer, member_type<MappedPointer>, MemberPointerConstructorArgs>::type;
+
+  class mapped_base;
+  class table_base_impl;
+
+  template<typename HashTable, typename ValueType, typename Allocator>
+  using table_base = table_base_impl;
+
+  explicit pointer_policy(MemberPointerConstructorArgs mpca_fn = MemberPointerConstructorArgs())
+  : mpca_fn_(std::move(mpca_fn))
+  {}
+
+  private:
+  MemberPointerConstructorArgs mpca_fn_;
+};
+
+
+template<typename WeakPointer, typename MemberPointer, typename MemberPointerConstructorArgs>
+class pointer_policy<WeakPointer, MemberPointer, MemberPointerConstructorArgs>::table_base_impl {
+  friend mapped_base;
+
+  public:
+  template<typename... Args, typename Alloc>
+  table_base_impl(const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc)
+  : mpca_fn_(std::get<pointer_policy>(args).mpca_fn_)
+  {}
+
+  private:
+  MemberPointerConstructorArgs mpca_fn_;
+};
+
+
+template<typename WeakPointer, typename MemberPointer, typename MemberPointerConstructorArgs>
+class pointer_policy<WeakPointer, MemberPointer, MemberPointerConstructorArgs>::mapped_base {
+  public:
+  explicit mapped_base(const table_base_impl& table)
+  : mpca_fn_(table.mpca_fn_)
+  {}
+
+  template<typename Pointer>
+  auto strengthen_args_(Pointer&& pointer) -> decltype(std::invoke(std::declval<const MemberPointerConstructorArgs&>(), std::declval<const Pointer&>())) {
+    return std::invoke(mpca_fn_, std::forward<Pointer>(pointer));
+  }
+
+  private:
+  MemberPointerConstructorArgs mpca_fn_;
 };
 
 

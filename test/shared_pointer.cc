@@ -24,7 +24,7 @@ SUITE(shared_pointer) {
   }
 
   TEST(shared_pointer_test) {
-    auto cache = cache_type(libhoard::max_size_policy(2));
+    auto cache = cache_type(libhoard::max_size_policy(2), libhoard::pointer_policy<>());
     auto test_value = std::make_shared<int>(1);
     cache.emplace(1, test_value);
     REQUIRE CHECK_EQUAL(test_value, cache.get(1).value_or(nullptr));

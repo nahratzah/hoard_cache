@@ -2,39 +2,28 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 
 #include "UnitTest++/UnitTest++.h"
 
-class mapped_value_fixture {
-  public:
-  using mapped_value = libhoard::detail::mapped_value<std::string, std::allocator<int>, std::error_code>;
-
-  template<typename... Args>
-  auto init_test(Args&&... args) -> void {
-    value = std::make_unique<mapped_value>(std::forward<Args>(args)...);
-  }
-
-  std::unique_ptr<mapped_value> value;
-};
-
-
-class mapped_pointer_fixture {
-  public:
-  using mapped_value = libhoard::detail::mapped_pointer<std::shared_ptr<std::string>, std::allocator<int>, std::error_code>;
-
-  std::shared_ptr<std::string> pointer = std::make_shared<std::string>("bla");
-
-  template<typename... Args>
-  auto init_test(Args&&... args) -> void {
-    value = std::make_unique<mapped_value>(std::forward<Args>(args)...);
-  }
-
-  std::unique_ptr<mapped_value> value;
-};
-
+#include <libhoard/pointer_policy.h>
 
 SUITE(mapped_value) {
+  class mapped_value_fixture {
+    public:
+    using mapped_value = libhoard::detail::mapped_value<std::string, std::allocator<int>, std::error_code>;
+    struct mock_table {};
+
+    template<typename... Args>
+    auto init_test(Args&&... args) -> void {
+      value = std::make_unique<mapped_value>(mock_table(), std::forward<Args>(args)...);
+    }
+
+    std::unique_ptr<mapped_value> value;
+  };
+
+
   TEST_FIXTURE(mapped_value_fixture, dfl_constructed) {
     init_test();
 
@@ -358,6 +347,29 @@ SUITE(mapped_value) {
 
 
 SUITE(mapped_pointer) {
+  class mapped_pointer_fixture {
+    public:
+    struct mock_table
+    : libhoard::pointer_policy<>::table_base_impl
+    {
+      mock_table()
+      : libhoard::pointer_policy<>::table_base_impl(std::make_tuple(libhoard::pointer_policy<>()), std::allocator<int>())
+      {}
+    };
+
+    using mapped_value = libhoard::detail::mapped_pointer<std::shared_ptr<std::string>, std::allocator<int>, std::error_code, std::weak_ptr<std::string>, std::shared_ptr<std::string>, libhoard::pointer_policy<>::mapped_base>;
+
+    std::shared_ptr<std::string> pointer = std::make_shared<std::string>("bla");
+
+    template<typename... Args>
+    auto init_test(Args&&... args) -> void {
+      value = std::make_unique<mapped_value>(mock_table(), std::forward<Args>(args)...);
+    }
+
+    std::unique_ptr<mapped_value> value;
+  };
+
+
   TEST_FIXTURE(mapped_pointer_fixture, dfl_constructed) {
     init_test();
 

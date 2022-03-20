@@ -110,8 +110,8 @@ struct is_pointer_policy_
 : std::false_type
 {};
 
-template<typename WeakPointer, typename MemberPointer>
-struct is_pointer_policy_<pointer_policy<WeakPointer, MemberPointer>>
+template<typename WeakPointer, typename MemberPointer, typename MemberPointerConstructorArgs>
+struct is_pointer_policy_<pointer_policy<WeakPointer, MemberPointer, MemberPointerConstructorArgs>>
 : std::true_type
 {};
 
@@ -206,7 +206,7 @@ struct select_mapper_impl_<T, PoliciesTypeList, true> {
   using weak_pointer = typename pointer_policy::template weak_type<T>;
   using member_pointer = typename pointer_policy::template member_type<T>;
 
-  using type = mapped_pointer<T, allocator_type, error_type, weak_pointer, member_pointer>;
+  using type = mapped_pointer<T, allocator_type, error_type, weak_pointer, member_pointer, typename pointer_policy::mapped_base>;
 };
 
 template<typename T, typename PoliciesTypeList>

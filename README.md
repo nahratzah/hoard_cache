@@ -83,11 +83,14 @@ libhoard::cache<
 ```
 Constructs a cache where elements will be removed after 5 minutes.
 
-## Making the Cache Thread-safe
+## Thread-safe
 
-Usually, when the cache is declared, it is not thread-safe.
-(I may change this in the future.)
-To make the cache thread-safe, you'll want to add the `libhoard::thread_safe_policy`.
+Usually, when the cache is declared, it is thread-safe.
+To make the cache not thread-safe, you'll want to add the `libhoard::thread_unsafe_policy`.
+If you want to be explicit, you can add the `libhoard::thread_safe_policy`.
+
+The refresh policy requires the `libhoard::thread_safe_policy` and introduces it as a dependency.
+This ensures you can't accidentally introduce the `libhoard::thread_unsafe_policy` on a cache that requires thread safety to function correctly.
 
 ```
 #include <libhoard/cache.h>
@@ -98,8 +101,13 @@ using mapped_type = std::string;
 
 libhoard::cache<
     key_type, mapped_type,
-    libhoard::thread_safe_policy
+    libhoard::thread_safe_policy // this is the default, you can omit this
     > c;
+
+libhoard::cache<
+    key_type, mapped_type,
+    libhoard::thread_unsafe_policy
+    > d;
 ```
 
 ## Smart Pointers and Singletons

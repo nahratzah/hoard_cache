@@ -41,7 +41,7 @@ SUITE(refresh_policy) {
       fixture* self;
     };
 
-    using hashtable_type = libhoard::detail::hashtable<int, std::string, std::error_code,
+    using hashtable_type = libhoard::detail::hashtable<int, std::string,
           libhoard::refresh_policy<std::chrono::system_clock>,
           libhoard::resolver_policy<resolver_impl>>;
 

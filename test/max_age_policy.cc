@@ -12,7 +12,7 @@
 
 SUITE(max_age_policy) {
   TEST(max_age_test) {
-    using hashtable_type = libhoard::detail::hashtable<int, std::string, std::error_code, libhoard::max_age_policy<test_clock>>;
+    using hashtable_type = libhoard::detail::hashtable<int, std::string, libhoard::max_age_policy<test_clock>>;
     using namespace std::literals::chrono_literals;
 
     // Values are to expire after 10s.

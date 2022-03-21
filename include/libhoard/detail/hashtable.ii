@@ -174,57 +174,57 @@ inline hashtable_dfl_constructible_<T>::hashtable_dfl_constructible_([[maybe_unu
 {}
 
 
-template<typename ValueType, typename... BaseTypes>
+template<typename ValueType, typename... PolicyMap>
 template<typename... Args, typename Alloc>
-inline hashtable_policy_container<ValueType, BaseTypes...>::hashtable_policy_container(const std::tuple<Args...>& args, const Alloc& alloc)
-: BaseTypes(args, alloc)...
+inline hashtable_policy_container<ValueType, PolicyMap...>::hashtable_policy_container(const std::tuple<Args...>& args, const Alloc& alloc)
+: PolicyMap::table_base(args, alloc)...
 {}
 
-template<typename ValueType, typename... BaseTypes>
-inline hashtable_policy_container<ValueType, BaseTypes...>::~hashtable_policy_container() noexcept {
+template<typename ValueType, typename... PolicyMap>
+inline hashtable_policy_container<ValueType, PolicyMap...>::~hashtable_policy_container() noexcept {
   this->destroy();
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_create_(ValueType* vptr) noexcept -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::on_create_(ValueType* vptr) noexcept -> void {
   base_invoke_(on_create_fn<hashtable_policy_container, ValueType>(this, vptr));
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_assign_(ValueType* vptr, bool value, bool assigned_via_callback) noexcept -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::on_assign_(ValueType* vptr, bool value, bool assigned_via_callback) noexcept -> void {
   base_invoke_(on_assign_fn<hashtable_policy_container, ValueType>(this, vptr, value, assigned_via_callback));
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_unlink_(ValueType* vptr) noexcept -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::on_unlink_(ValueType* vptr) noexcept -> void {
   base_invoke_(on_unlink_fn<hashtable_policy_container, ValueType>(this, vptr));
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_hit_(ValueType* vptr) noexcept -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::on_hit_(ValueType* vptr) noexcept -> void {
   base_invoke_(on_hit_fn<hashtable_policy_container, ValueType>(this, vptr));
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_miss_() noexcept -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::on_miss_() noexcept -> void {
   base_invoke_(on_miss_fn<hashtable_policy_container>(this));
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::on_maintenance_() noexcept -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::on_maintenance_() noexcept -> void {
   base_invoke_(on_maintenance_fn<hashtable_policy_container>(this));
 }
 
-template<typename ValueType, typename... BaseTypes>
+template<typename ValueType, typename... PolicyMap>
 template<bool Enable>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::policy_removal_check_() const noexcept -> std::enable_if_t<Enable, std::size_t> {
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::policy_removal_check_() const noexcept -> std::enable_if_t<Enable, std::size_t> {
   std::size_t count_to_remove = 0;
   base_invoke_(policy_removal_check_fn<hashtable_policy_container>(this, &count_to_remove));
   return count_to_remove;
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::init() -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::init() -> void {
 #if __cpp_exceptions
   try
 #endif
@@ -239,15 +239,15 @@ inline auto hashtable_policy_container<ValueType, BaseTypes...>::init() -> void 
 #endif
 }
 
-template<typename ValueType, typename... BaseTypes>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::destroy() -> void {
+template<typename ValueType, typename... PolicyMap>
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::destroy() -> void {
   base_invoke_(destroy_fn<hashtable_policy_container>(this));
 }
 
-template<typename ValueType, typename... BaseTypes>
+template<typename ValueType, typename... PolicyMap>
 template<typename Fn>
-inline auto hashtable_policy_container<ValueType, BaseTypes...>::base_invoke_(Fn&& fn) noexcept -> void {
-  typename type_list<BaseTypes...>::template apply_t<maybe_apply_for_each_type> functors;
+inline auto hashtable_policy_container<ValueType, PolicyMap...>::base_invoke_(Fn&& fn) noexcept -> void {
+  typename type_list<typename PolicyMap::table_base...>::template apply_t<maybe_apply_for_each_type> functors;
   functors(std::forward<Fn>(fn));
 }
 

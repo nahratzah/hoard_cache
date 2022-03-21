@@ -12,4 +12,7 @@
  * \ingroup libhoard_api
  */
 namespace libhoard {
+///\ingroup libhoard_detail
+namespace detail {
+} /* namespace libhoard::detail */
 } /* namespace libhoard */

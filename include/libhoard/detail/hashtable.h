@@ -132,14 +132,14 @@ class hashtable_dfl_constructible_
  * \details
  * Handles dispatching events into the policies.
  */
-template<typename ValueType, typename... BaseTypes>
+template<typename ValueType, typename... PolicyMap>
 class hashtable_policy_container
-: public BaseTypes...
+: public PolicyMap::table_base...
 {
   template<typename, typename, typename> friend class async_resolver_callback; // Allow async_resolver_policy to emit the on_asign_ event.
 
   public:
-  static constexpr bool has_policy_removal_check = std::disjunction_v<has_policy_removal_check_<BaseTypes>...>;
+  static constexpr bool has_policy_removal_check = std::disjunction_v<has_policy_removal_check_<typename PolicyMap::table_base>...>;
 
   protected:
   hashtable_policy_container() = delete;
@@ -211,6 +211,13 @@ struct select_mapper_impl_<T, PoliciesTypeList, true> {
 
 template<typename T, typename PoliciesTypeList>
 using select_mapper_ = typename select_mapper_impl_<T, PoliciesTypeList, PoliciesTypeList::template transform_t<is_pointer_policy_>::template apply_t<std::disjunction>::value>::type;
+
+
+template<typename Policy, typename TableBase>
+struct policy_and_table_base {
+  using policy = Policy;
+  using table_base = TableBase;
+};
 
 
 template<typename KeyType, typename T, typename... Policies>
@@ -294,7 +301,13 @@ struct hashtable_helper_ {
 
   ///\brief Helper to figure out table base.
   template<typename Policy>
-  using bound_figure_out_hashtable_table_base_ = figure_out_hashtable_table_base_<Policy, hashtable<KeyType, T, Policies...>, value_type, allocator_type>;
+  struct bound_figure_out_hashtable_table_base_ {
+    private:
+    using type_ = policy_and_table_base<Policy, typename figure_out_hashtable_table_base_<Policy, hashtable<KeyType, T, Policies...>, value_type, allocator_type>::type>;
+
+    public:
+    using type = std::conditional_t<std::is_void_v<typename type_::table_base>, void, type_>;
+  };
   ///\brief List of types that the hashtable must derive from according to policies.
   using ht_base_types = typename all_policies::template transform_t<bound_figure_out_hashtable_table_base_>::template remove_all_t<void>;
   ///\brief Type that derives from ht_base_types.

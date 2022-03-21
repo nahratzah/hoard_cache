@@ -22,19 +22,19 @@ class hashtable_fixture {
 
 SUITE(hashtable) {
   TEST_FIXTURE(hashtable_fixture, constructor) {
-    init_test(std::tuple<>());
+    init_test();
 
     CHECK(hashtable->empty());
     CHECK_EQUAL(0u, hashtable->size());
   }
 
   TEST_FIXTURE(hashtable_fixture, construct_with_max_load_factor) {
-    init_test(std::tuple<>(), 17.0f);
+    init_test(17.0f);
     CHECK_CLOSE(17.0, hashtable->max_load_factor(), 0.000001);
   }
 
   TEST_FIXTURE(hashtable_fixture, emplace_value) {
-    init_test(std::tuple<>());
+    init_test();
 
     hashtable->emplace(std::string("key"), std::string("value"));
 
@@ -46,7 +46,7 @@ SUITE(hashtable) {
   }
 
   TEST_FIXTURE(hashtable_fixture, emplace_value_using_tuples) {
-    init_test(std::tuple<>());
+    init_test();
 
     hashtable->emplace(
         std::piecewise_construct,
@@ -60,7 +60,7 @@ SUITE(hashtable) {
   }
 
   TEST_FIXTURE(hashtable_fixture, emplace_value_expires_others_with_same_key) {
-    init_test(std::tuple<>());
+    init_test();
 
     hashtable->emplace(std::string("key"), std::string("value 1"));
     hashtable->emplace(std::string("key"), std::string("value 2"));
@@ -72,7 +72,7 @@ SUITE(hashtable) {
   }
 
   TEST_FIXTURE(hashtable_fixture, emplace_value_using_tuples_expires_others_with_same_key) {
-    init_test(std::tuple<>());
+    init_test();
 
     hashtable->emplace(
         std::piecewise_construct,
@@ -88,14 +88,14 @@ SUITE(hashtable) {
   }
 
   TEST_FIXTURE(hashtable_fixture, get_if_present_on_empty_table) {
-    init_test(std::tuple<>());
+    init_test();
 
     auto get_result = hashtable->get_if_exists("key");
     CHECK_EQUAL(0u, get_result.index());
   }
 
   TEST_FIXTURE(hashtable_fixture, get_if_present_finds_a_value) {
-    init_test(std::tuple<>());
+    init_test();
     hashtable->emplace(std::string("key_1"), std::string("value_1"));
     hashtable->emplace(std::string("key_2"), std::string("value_2"));
     hashtable->emplace(std::string("key_3"), std::string("value_3"));
@@ -111,7 +111,7 @@ SUITE(hashtable) {
   }
 
   TEST_FIXTURE(hashtable_fixture, expire) {
-    init_test(std::tuple<>());
+    init_test();
     hashtable->emplace(std::string("key_1"), std::string("value_1"));
     hashtable->emplace(std::string("key_2"), std::string("value_2"));
     hashtable->emplace(std::string("key_3"), std::string("value_3"));

@@ -53,7 +53,7 @@ class queue_fixture_impl {
         libhoard::detail::type_list<>>;
 
     impl()
-    : libhoard::detail::queue<impl, element>(std::make_tuple(), std::allocator<int>()) // Queue takes arguments, but doesn't use them.
+    : libhoard::detail::queue<impl, element>(libhoard::queue_policy(), std::allocator<int>()) // Queue takes arguments, but doesn't use them.
     {}
 
     auto lru_expire_(std::size_t count) noexcept {

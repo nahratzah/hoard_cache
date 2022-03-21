@@ -46,8 +46,7 @@ refresh_impl_policy::value_base::value_base([[maybe_unused]] const HashTable& ta
 
 
 template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline refresh_impl_policy::table_base<HashTable, ValueType, Allocator>::table_base([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator)
+inline refresh_impl_policy::table_base<HashTable, ValueType, Allocator>::table_base([[maybe_unused]] const refresh_impl_policy& policy, [[maybe_unused]] const Allocator& allocator)
 {}
 
 template<typename HashTable, typename ValueType, typename Allocator>

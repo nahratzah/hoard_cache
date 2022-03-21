@@ -35,11 +35,18 @@ inline auto asio_refresh_policy<Clock, Executor, WaitTraits>::value_base::on_ref
 
 template<typename Clock, typename Executor, typename WaitTraits>
 template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline asio_refresh_policy<Clock, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator)
-: delay(std::get<asio_refresh_policy>(args).delay),
-  idle_timer(std::get<asio_refresh_policy>(args).idle_timer),
-  executor(std::get<asio_refresh_policy>(args).executor)
+inline asio_refresh_policy<Clock, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::table_base(const asio_refresh_policy& policy, [[maybe_unused]] const Allocator& allocator)
+: delay(policy.delay),
+  idle_timer(policy.idle_timer),
+  executor(policy.executor)
+{}
+
+template<typename Clock, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline asio_refresh_policy<Clock, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::table_base(asio_refresh_policy&& policy, [[maybe_unused]] const Allocator& allocator)
+: delay(std::move(policy.delay)),
+  idle_timer(std::move(policy.idle_timer)),
+  executor(std::move(policy.executor))
 {}
 
 template<typename Clock, typename Executor, typename WaitTraits>
@@ -107,11 +114,18 @@ inline auto asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::valu
 
 template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
 template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator)
-: idle_timer(std::get<asio_refresh_fn_policy>(args).idle_timer),
-  executor(std::get<asio_refresh_fn_policy>(args).executor),
-  refresh_fn(std::get<asio_refresh_fn_policy>(args).refresh_fn)
+inline asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::table_base(const asio_refresh_fn_policy& policy, [[maybe_unused]] const Allocator& allocator)
+: idle_timer(policy.idle_timer),
+  executor(policy.executor),
+  refresh_fn(policy.refresh_fn)
+{}
+
+template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base<HashTable, ValueType, Allocator>::table_base(asio_refresh_fn_policy&& policy, [[maybe_unused]] const Allocator& allocator)
+: idle_timer(std::move(policy.idle_timer)),
+  executor(std::move(policy.executor)),
+  refresh_fn(std::move(policy.refresh_fn))
 {}
 
 template<typename Clock, typename RefreshFn, typename Executor, typename WaitTraits>

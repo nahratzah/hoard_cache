@@ -38,8 +38,7 @@ template<typename Clock, bool ExpectValue>
 template<typename HashTable, typename ValueType, typename Allocator>
 class max_age_policy_impl<Clock, ExpectValue>::table_base {
   public:
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, const Allocator& alloc) noexcept;
+  table_base(const max_age_policy_impl& policy, const Allocator& alloc) noexcept;
 
   auto on_assign_(ValueType* vptr, bool value, [[maybe_unused]] bool assigned_via_callback) noexcept -> void;
 

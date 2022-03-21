@@ -144,8 +144,8 @@ class hashtable_policy_container
   protected:
   hashtable_policy_container() = delete;
 
-  template<typename... Args, typename Alloc>
-  hashtable_policy_container(const std::tuple<Args...>& args, const Alloc& alloc);
+  template<typename Alloc, typename... Args>
+  hashtable_policy_container(std::allocator_arg_t aa, const Alloc& alloc, Args&&... args);
 
   ~hashtable_policy_container() noexcept;
 
@@ -464,9 +464,12 @@ class hashtable
 
   public:
   template<typename... Args>
-  explicit hashtable(const std::tuple<Args...>& args, allocator_type allocator = allocator_type());
+  explicit hashtable(std::allocator_arg_t aa, allocator_type allocator, Args&&... args);
   template<typename... Args>
-  explicit hashtable(const std::tuple<Args...>& args, float max_load_factor, allocator_type allocator = allocator_type());
+  explicit hashtable(std::allocator_arg_t aa, allocator_type allocator, float max_load_factor, Args&&... args);
+  template<typename... Args>
+  explicit hashtable(Args&&... args); // also handles the max-load-factor case
+
   ~hashtable();
 
   using bht::is_hashtable_linked;

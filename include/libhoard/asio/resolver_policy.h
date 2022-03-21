@@ -55,10 +55,14 @@ class asio_resolver_policy<Functor, Executor>::table_base {
   public:
   using callback = detail::async_resolver_callback<HashTable, ValueType, Allocator>;
 
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc)
-  : executor(std::get<asio_resolver_policy>(args).executor),
-    functor(std::get<asio_resolver_policy>(args).functor)
+  table_base(const asio_resolver_policy& policy, [[maybe_unused]] const Allocator& alloc)
+  : executor(policy.executor),
+    functor(policy.functor)
+  {}
+
+  table_base(asio_resolver_policy&& policy, [[maybe_unused]] const Allocator& alloc)
+  : executor(std::move(policy.executor)),
+    functor(std::move(policy.functor))
   {}
 
   auto get_executor() const -> Executor {

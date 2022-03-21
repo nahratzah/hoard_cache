@@ -18,9 +18,14 @@ inline resolver_policy<Functor>::resolver_policy(Functor resolver)
 
 template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc)
-: resolver_(std::get<resolver_policy>(args).resolver_)
+inline resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const resolver_policy& policy, [[maybe_unused]] const Allocator& alloc)
+: resolver_(policy.resolver_)
+{}
+
+template<typename Functor>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(resolver_policy&& policy, [[maybe_unused]] const Allocator& alloc)
+: resolver_(std::move(policy.resolver_))
 {}
 
 template<typename Functor>
@@ -62,9 +67,14 @@ inline auto async_resolver_policy<Functor>::on_assign_(HashTable& hashtable, Val
 
 template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc)
-: resolver_(std::get<async_resolver_policy>(args).resolver_)
+inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(const async_resolver_policy& policy, [[maybe_unused]] const Allocator& alloc)
+: resolver_(policy.resolver_)
+{}
+
+template<typename Functor>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline async_resolver_policy<Functor>::table_base<HashTable, ValueType, Allocator>::table_base(async_resolver_policy&& policy, [[maybe_unused]] const Allocator& alloc)
+: resolver_(std::move(policy.resolver_))
 {}
 
 template<typename Functor>

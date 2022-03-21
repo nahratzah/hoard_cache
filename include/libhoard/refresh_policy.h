@@ -50,8 +50,8 @@ template<typename Clock>
 template<typename HashTable, typename ValueType, typename Allocator>
 class refresh_policy<Clock>::table_base {
   public:
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, const Allocator& allocator);
+  table_base(const refresh_policy& policy, const Allocator& allocator);
+  table_base(refresh_policy&& policy, const Allocator& allocator);
 
   auto on_assign_(ValueType* vptr, bool value, bool assigned_via_callback) noexcept -> void;
   auto on_hit_(ValueType* vptr) noexcept -> void;

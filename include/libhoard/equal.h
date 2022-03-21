@@ -1,7 +1,6 @@
 #pragma once
 
-#include <tuple>
-#include <type_traits>
+#include <utility>
 
 namespace libhoard {
 
@@ -15,23 +14,15 @@ template<typename Equal>
 class equal {
   private:
   class table_base_impl {
-    private:
-    template<typename... Args, typename Alloc>
-    table_base_impl(const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc,
-        [[maybe_unused]] std::true_type has_equal) noexcept
-    : equal(std::get<Equal>(args))
-    {}
-
-    template<typename... Args, typename Alloc>
-    table_base_impl([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc,
-        [[maybe_unused]] std::false_type has_equal) noexcept
-    : equal()
-    {}
-
     public:
-    template<typename... Args, typename Alloc>
-    table_base_impl(const std::tuple<Args...>& args, const Alloc& alloc) noexcept
-    : table_base_impl(args, alloc, std::disjunction<std::is_same<std::decay_t<Args>, Equal>...>())
+    template<typename Alloc>
+    table_base_impl(const class equal& policy, [[maybe_unused]] const Alloc& alloc)
+    : equal(policy.equal_)
+    {}
+
+    template<typename Alloc>
+    table_base_impl(class equal&& policy, [[maybe_unused]] const Alloc& alloc)
+    : equal(std::move(policy.equal_))
     {}
 
     const Equal equal;
@@ -40,6 +31,19 @@ class equal {
   public:
   template<typename HashTable, typename ValueType, typename Allocator>
   using table_base = table_base_impl;
+
+  equal() = default;
+
+  explicit equal(const Equal& equal_fn)
+  : equal_(equal_fn)
+  {}
+
+  explicit equal(Equal&& equal_fn)
+  : equal_(std::move(equal_fn))
+  {}
+
+  private:
+  Equal equal_;
 };
 
 

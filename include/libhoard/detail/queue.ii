@@ -84,8 +84,8 @@ inline auto basic_queue::invariant() const noexcept -> bool {
 
 
 template<typename HashTable, typename ValueType>
-template<typename... Args, typename Alloc>
-inline queue<HashTable, ValueType>::queue([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] Alloc&& alloc) noexcept
+template<typename Alloc>
+inline queue<HashTable, ValueType>::queue([[maybe_unused]] const queue_policy& policy, [[maybe_unused]] const Alloc& alloc) noexcept
 {}
 
 template<typename HashTable, typename ValueType>

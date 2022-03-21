@@ -34,10 +34,16 @@ inline auto refresh_policy<Clock>::value_base::on_refresh(const value_base* old_
 
 template<typename Clock>
 template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline refresh_policy<Clock>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator)
-: delay(std::get<refresh_policy>(args).delay),
-  idle_timer(std::get<refresh_policy>(args).idle_timer)
+inline refresh_policy<Clock>::table_base<HashTable, ValueType, Allocator>::table_base(const refresh_policy& policy, [[maybe_unused]] const Allocator& allocator)
+: delay(policy.delay),
+  idle_timer(policy.idle_timer)
+{}
+
+template<typename Clock>
+template<typename HashTable, typename ValueType, typename Allocator>
+inline refresh_policy<Clock>::table_base<HashTable, ValueType, Allocator>::table_base(refresh_policy&& policy, [[maybe_unused]] const Allocator& allocator)
+: delay(std::move(policy.delay)),
+  idle_timer(std::move(policy.idle_timer))
 {}
 
 template<typename Clock>

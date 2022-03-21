@@ -1,7 +1,6 @@
 #pragma once
 
 #include <mutex>
-#include <tuple>
 
 namespace libhoard {
 
@@ -19,8 +18,8 @@ class thread_safe_policy {
   class table_base_impl {
     public:
     ///\brief Constructor.
-    template<typename... Args, typename Alloc>
-    table_base_impl(const std::tuple<Args...>& args, const Alloc& alloc);
+    template<typename Alloc>
+    table_base_impl(const thread_safe_policy& policy, const Alloc& alloc);
 
     auto lock() -> void;
     auto try_lock() -> bool;

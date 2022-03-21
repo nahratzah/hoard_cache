@@ -9,14 +9,8 @@ inline max_size_policy::max_size_policy(std::size_t v) noexcept
 
 
 template<typename HashTable, typename ValueType, typename Allocator>
-inline max_size_policy::table_base<HashTable, ValueType, Allocator>::table_base(const max_size_policy& p) noexcept
+inline max_size_policy::table_base<HashTable, ValueType, Allocator>::table_base(const max_size_policy& p, [[maybe_unused]] const Allocator& alloc) noexcept
 : max_size_(p.value)
-{}
-
-template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline max_size_policy::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc) noexcept
-: table_base(std::get<max_size_policy>(args))
 {}
 
 template<typename HashTable, typename ValueType, typename Allocator>

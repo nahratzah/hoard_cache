@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <tuple>
 
 #include "detail/meta.h"
 #include "detail/queue.h"
@@ -21,14 +20,8 @@ class max_size_policy {
   ///\tparam ValueType Type held by the hashtable. (This parameter is unused.)
   template<typename HashTable, typename ValueType, typename Allocator>
   class table_base {
-    private:
-    explicit table_base(const max_size_policy& p) noexcept;
-
     public:
-    ///\brief Constructor.
-    ///\note Requires one of the elements in \p args to be max_size
-    template<typename... Args>
-    table_base(const std::tuple<Args...>& args, const Allocator& alloc) noexcept;
+    explicit table_base(const max_size_policy& p, const Allocator& alloc) noexcept;
 
     ///\brief Tell the cache to maybe expire some elements.
     auto policy_removal_check_() const noexcept -> std::size_t;

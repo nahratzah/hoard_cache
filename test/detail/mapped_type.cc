@@ -353,7 +353,7 @@ SUITE(mapped_pointer) {
     : libhoard::pointer_policy<>::table_base_impl
     {
       mock_table()
-      : libhoard::pointer_policy<>::table_base_impl(std::make_tuple(libhoard::pointer_policy<>()), std::allocator<int>())
+      : libhoard::pointer_policy<>::table_base_impl(libhoard::pointer_policy<>(), std::allocator<int>())
       {}
     };
 

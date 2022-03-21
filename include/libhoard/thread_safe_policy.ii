@@ -3,8 +3,8 @@
 namespace libhoard {
 
 
-template<typename... Args, typename Alloc>
-inline thread_safe_policy::table_base_impl::table_base_impl([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc)
+template<typename Alloc>
+inline thread_safe_policy::table_base_impl::table_base_impl([[maybe_unused]] const thread_safe_policy& policy, [[maybe_unused]] const Alloc& alloc)
 {}
 
 inline auto thread_safe_policy::table_base_impl::lock() -> void {

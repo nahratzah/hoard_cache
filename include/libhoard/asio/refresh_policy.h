@@ -48,8 +48,8 @@ class asio_refresh_policy<Clock, Executor, WaitTraits>::table_base {
   friend asio_refresh_policy::value_base;
 
   public:
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator);
+  table_base(const asio_refresh_policy& policy, const Allocator& allocator);
+  table_base(asio_refresh_policy&& policy, const Allocator& allocator);
 
   auto on_assign_(ValueType* vptr, bool value, bool assigned_via_callback) noexcept -> void;
   auto on_hit_(ValueType* vptr) noexcept -> void;
@@ -98,8 +98,8 @@ class asio_refresh_fn_policy<Clock, RefreshFn, Executor, WaitTraits>::table_base
   friend asio_refresh_fn_policy::value_base;
 
   public:
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& allocator);
+  table_base(const asio_refresh_fn_policy& policy, const Allocator& allocator);
+  table_base(asio_refresh_fn_policy&& policy, const Allocator& allocator);
 
   auto on_assign_(ValueType* vptr, bool value, bool assigned_via_callback) noexcept -> void;
   auto on_hit_(ValueType* vptr) noexcept -> void;

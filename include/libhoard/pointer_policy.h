@@ -138,9 +138,14 @@ class pointer_policy<WeakPointer, MemberPointer, MemberPointerConstructorArgs>::
   friend mapped_base;
 
   public:
-  template<typename... Args, typename Alloc>
-  table_base_impl(const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc)
-  : mpca_fn_(std::get<pointer_policy>(args).mpca_fn_)
+  template<typename Alloc>
+  table_base_impl(const pointer_policy& policy, [[maybe_unused]] const Alloc& alloc)
+  : mpca_fn_(policy.mpca_fn_)
+  {}
+
+  template<typename Alloc>
+  table_base_impl(pointer_policy&& policy, [[maybe_unused]] const Alloc& alloc)
+  : mpca_fn_(std::move(policy.mpca_fn_))
   {}
 
   private:

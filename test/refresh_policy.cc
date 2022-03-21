@@ -47,16 +47,14 @@ SUITE(refresh_policy) {
 
     void init(std::chrono::system_clock::duration refresh) {
       hashtable = std::make_unique<hashtable_type>(
-          std::make_tuple(
-              libhoard::resolver_policy<resolver_impl>(resolver_impl(this)),
-              libhoard::refresh_policy<std::chrono::system_clock>(refresh)));
+          libhoard::resolver_policy<resolver_impl>(resolver_impl(this)),
+          libhoard::refresh_policy<std::chrono::system_clock>(refresh));
     }
 
     void init(std::chrono::system_clock::duration refresh, std::chrono::system_clock::duration idle_timer) {
       hashtable = std::make_unique<hashtable_type>(
-          std::make_tuple(
-              libhoard::resolver_policy<resolver_impl>(resolver_impl(this)),
-              libhoard::refresh_policy<std::chrono::system_clock>(refresh, idle_timer)));
+          libhoard::resolver_policy<resolver_impl>(resolver_impl(this)),
+          libhoard::refresh_policy<std::chrono::system_clock>(refresh, idle_timer));
     }
 
     std::list<std::string> resolver_values;

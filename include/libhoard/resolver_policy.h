@@ -34,8 +34,8 @@ template<typename Functor>
 template<typename HashTable, typename ValueType, typename Allocator>
 class resolver_policy<Functor>::table_base {
   public:
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, const Allocator& alloc);
+  table_base(const resolver_policy& policy, const Allocator& alloc);
+  table_base(resolver_policy&& policy, const Allocator& alloc);
 
   template<typename... Keys>
   auto resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator>;
@@ -69,8 +69,8 @@ class async_resolver_policy<Functor>::table_base {
   public:
   using callback = detail::async_resolver_callback<HashTable, ValueType, Allocator>;
 
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, const Allocator& alloc);
+  table_base(const async_resolver_policy& policy, const Allocator& allocator);
+  table_base(async_resolver_policy&& policy, const Allocator& allocator);
 
   template<typename... Keys>
   auto resolve(std::size_t hash, const Keys&... keys) -> detail::refcount_ptr<ValueType, Allocator>;

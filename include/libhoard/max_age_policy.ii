@@ -11,9 +11,8 @@ inline max_age_policy_impl<Clock, ExpectValue>::max_age_policy_impl(std::chrono:
 
 template<typename Clock, bool ExpectValue>
 template<typename HashTable, typename ValueType, typename Allocator>
-template<typename... Args>
-inline max_age_policy_impl<Clock, ExpectValue>::table_base<HashTable, ValueType, Allocator>::table_base(const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc) noexcept
-: max_age_(std::get<max_age_policy_impl>(args).max_age)
+inline max_age_policy_impl<Clock, ExpectValue>::table_base<HashTable, ValueType, Allocator>::table_base(const max_age_policy_impl& policy, [[maybe_unused]] const Allocator& alloc) noexcept
+: max_age_(policy.max_age)
 {}
 
 template<typename Clock, bool ExpectValue>

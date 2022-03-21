@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cstddef>
-#include <tuple>
 
 #include "linked_list.h"
 
 namespace libhoard::detail {
+
+
+struct queue_policy; // forward declaration
 
 
 ///\brief Common type-agnostic part of queue.
@@ -93,8 +95,8 @@ class queue
 : private basic_queue
 {
   protected:
-  template<typename... Args, typename Alloc>
-  explicit queue([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] Alloc&& alloc) noexcept;
+  template<typename Alloc>
+  queue(const queue_policy& policy, const Alloc& alloc) noexcept;
 
   ~queue() noexcept;
 

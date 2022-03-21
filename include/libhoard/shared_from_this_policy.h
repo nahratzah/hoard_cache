@@ -15,8 +15,7 @@ class shared_from_this_policy {
   : public std::enable_shared_from_this<HashTable>
   {
     public:
-    template<typename... Args>
-    table_base([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Allocator& alloc) {}
+    table_base([[maybe_unused]] const shared_from_this_policy& args, [[maybe_unused]] const Allocator& alloc) {}
   };
 };
 

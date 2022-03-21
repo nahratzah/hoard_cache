@@ -4,6 +4,34 @@ namespace libhoard::detail {
 namespace {
 
 
+template<typename Policy>
+struct policy_selector_ {
+  private:
+  template<typename T>
+  using bound_is_same_ = std::is_same<Policy, std::decay_t<T>>;
+
+  template<typename... Ts>
+  using result_type_for_t = typename type_list<Ts...>::template filter_t<bound_is_same_>;
+
+  template<typename... Ts>
+  using result_type = typename std::conditional_t<result_type_for_t<Ts...>::empty, type_list<Policy>, result_type_for_t<Ts...>>::template apply_t<select_single_element_t>;
+
+  public:
+  template<typename Arg0, typename... Args>
+  static inline auto get(Arg0&& arg0, Args&&... args) -> result_type<Arg0, Args...> {
+    if constexpr(std::is_same_v<Policy, std::decay_t<Arg0>>)
+      return std::forward<Arg0>(arg0);
+    else
+      return get(std::forward<Args>(args)...);
+  }
+
+  static inline auto get() -> Policy {
+    static_assert(std::is_default_constructible_v<Policy>, "missing policy");
+    return Policy();
+  }
+};
+
+
 template<typename SelfType, typename ValueType>
 class on_create_fn {
   public:
@@ -175,9 +203,9 @@ inline hashtable_dfl_constructible_<T>::hashtable_dfl_constructible_([[maybe_unu
 
 
 template<typename ValueType, typename... PolicyMap>
-template<typename... Args, typename Alloc>
-inline hashtable_policy_container<ValueType, PolicyMap...>::hashtable_policy_container(const std::tuple<Args...>& args, const Alloc& alloc)
-: PolicyMap::table_base(args, alloc)...
+template<typename Alloc, typename... Args>
+inline hashtable_policy_container<ValueType, PolicyMap...>::hashtable_policy_container([[maybe_unused]] std::allocator_arg_t aa, const Alloc& alloc, Args&&... args)
+: PolicyMap::table_base(policy_selector_<typename PolicyMap::policy>::get(std::forward<Args>(args)...), alloc)...
 {}
 
 template<typename ValueType, typename... PolicyMap>
@@ -422,23 +450,29 @@ inline auto hashtable_helper_<KeyType, T, Policies...>::const_range::empty() con
 
 template<typename KeyType, typename T, typename... Policies>
 template<typename... Args>
-inline hashtable<KeyType, T, Policies...>::hashtable(const std::tuple<Args...>& args, allocator_type allocator)
+inline hashtable<KeyType, T, Policies...>::hashtable(std::allocator_arg_t aa, allocator_type allocator, Args&&... args)
 : basic_hashtable_allocator_member<allocator_type>(allocator),
   bht(allocator),
-  hashtable_helper_<KeyType, T, Policies...>::ht_base(args, allocator)
+  hashtable_helper_<KeyType, T, Policies...>::ht_base(std::move(aa), allocator, std::forward<Args>(args)...)
 {
   this->init();
 }
 
 template<typename KeyType, typename T, typename... Policies>
 template<typename... Args>
-inline hashtable<KeyType, T, Policies...>::hashtable(const std::tuple<Args...>& args, float max_load_factor, allocator_type allocator)
+inline hashtable<KeyType, T, Policies...>::hashtable(std::allocator_arg_t aa, allocator_type allocator, float max_load_factor, Args&&... args)
 : basic_hashtable_allocator_member<allocator_type>(allocator),
   bht(max_load_factor, allocator),
-  hashtable_helper_<KeyType, T, Policies...>::ht_base(args, allocator)
+  hashtable_helper_<KeyType, T, Policies...>::ht_base(std::move(aa), allocator, std::forward<Args>(args)...)
 {
   this->init();
 }
+
+template<typename KeyType, typename T, typename... Policies>
+template<typename... Args>
+inline hashtable<KeyType, T, Policies...>::hashtable(Args&&... args)
+: hashtable(std::allocator_arg, allocator_type(), std::forward<Args>(args)...)
+{}
 
 template<typename KeyType, typename T, typename... Policies>
 inline hashtable<KeyType, T, Policies...>::~hashtable() {

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <tuple>
-#include <type_traits>
+#include <utility>
 
 namespace libhoard {
 
@@ -15,23 +14,15 @@ template<typename Hash>
 class hash {
   private:
   class table_base_impl {
-    private:
-    template<typename... Args, typename Alloc>
-    table_base_impl(const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc,
-        [[maybe_unused]] std::true_type has_hash) noexcept
-    : hash(std::get<Hash>(args))
-    {}
-
-    template<typename... Args, typename Alloc>
-    table_base_impl([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc,
-        [[maybe_unused]] std::false_type has_hash) noexcept
-    : hash()
-    {}
-
     public:
-    template<typename... Args, typename Alloc>
-    table_base_impl(const std::tuple<Args...>& args, const Alloc& alloc) noexcept
-    : table_base_impl(args, alloc, std::disjunction<std::is_same<std::decay_t<Args>, Hash>...>())
+    template<typename Alloc>
+    table_base_impl(const class hash& policy, [[maybe_unused]] const Alloc& alloc)
+    : hash(policy.hash_)
+    {}
+
+    template<typename Alloc>
+    table_base_impl(class hash&& policy, [[maybe_unused]] const Alloc& alloc)
+    : hash(std::move(policy.hash_))
     {}
 
     const Hash hash;
@@ -40,6 +31,19 @@ class hash {
   public:
   template<typename HashTable, typename ValueType, typename Allocator>
   using table_base = table_base_impl;
+
+  hash() = default;
+
+  explicit hash(const Hash& hash_fn)
+  : hash_(hash_fn)
+  {}
+
+  explicit hash(Hash&& hash_fn)
+  : hash_(std::move(hash_fn))
+  {}
+
+  private:
+  Hash hash_;
 };
 
 

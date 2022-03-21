@@ -29,7 +29,7 @@ class cache
   public:
   template<typename... Args>
   explicit cache(Args&&... args)
-  : impl_(std::make_shared<hashtable_type>(std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...)))
+  : impl_(std::make_shared<hashtable_type>(std::forward<Args>(args)...))
   {}
 
   template<typename... Keys>

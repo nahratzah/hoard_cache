@@ -38,8 +38,7 @@ class refresh_impl_policy::value_base {
 template<typename HashTable, typename ValueType, typename Allocator>
 class refresh_impl_policy::table_base {
   public:
-  template<typename... Args>
-  table_base(const std::tuple<Args...>& args, const Allocator& allocator);
+  table_base(const refresh_impl_policy& policy, const Allocator& allocator);
 
   auto refresh(ValueType* raw_value_ptr) -> void;
 };

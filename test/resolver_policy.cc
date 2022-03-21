@@ -39,7 +39,7 @@ SUITE(resolver_policy) {
     using hashtable_type = libhoard::detail::hashtable<int, std::string, std::exception_ptr, libhoard::resolver_policy<resolver_impl>>;
     using cache_type = libhoard::cache<int, std::string, libhoard::resolver_policy<resolver_impl>>;
 
-    std::unique_ptr<hashtable_type> hashtable = std::make_unique<hashtable_type>(std::make_tuple(libhoard::resolver_policy<resolver_impl>(resolver_impl(*this))));
+    std::unique_ptr<hashtable_type> hashtable = std::make_unique<hashtable_type>(libhoard::resolver_policy<resolver_impl>(resolver_impl(*this)));
     cache_type cache = cache_type(libhoard::resolver_policy<resolver_impl>(resolver_impl(*this)));
     std::exception_ptr error;
   };
@@ -154,7 +154,7 @@ SUITE(async_resolver_policy) {
 
     std::vector<std::thread> tasks;
     std::exception_ptr error; // If set, next callback invocation will install an error.
-    std::shared_ptr<hashtable_type> hashtable = std::make_shared<hashtable_type>(std::make_tuple(libhoard::async_resolver_policy<resolver_impl>(this)));
+    std::shared_ptr<hashtable_type> hashtable = std::make_shared<hashtable_type>(libhoard::async_resolver_policy<resolver_impl>(this));
     cache_type cache = cache_type(libhoard::async_resolver_policy<resolver_impl_for_int_errors>(this));
   };
 

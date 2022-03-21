@@ -16,7 +16,7 @@ SUITE(max_age_policy) {
     using namespace std::literals::chrono_literals;
 
     // Values are to expire after 10s.
-    auto table = std::make_unique<hashtable_type>(std::make_tuple(libhoard::max_age_policy<test_clock>(10s)));
+    auto table = std::make_unique<hashtable_type>(libhoard::max_age_policy<test_clock>(10s));
     table->emplace(3, "three");
 
     CHECK_EQUAL("three", std::get<1>(table->get(3)));

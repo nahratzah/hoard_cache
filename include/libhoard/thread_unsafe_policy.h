@@ -1,7 +1,5 @@
 #pragma once
 
-#include <tuple>
-
 namespace libhoard {
 
 
@@ -17,7 +15,7 @@ class thread_unsafe_policy {
   class table_base_impl {
     public:
     template<typename... Args, typename Alloc>
-    table_base_impl([[maybe_unused]] const std::tuple<Args...>& args, [[maybe_unused]] const Alloc& alloc) {}
+    table_base_impl([[maybe_unused]] const thread_unsafe_policy& policy, [[maybe_unused]] const Alloc& alloc) {}
 
     auto lock() const noexcept -> void {}
 

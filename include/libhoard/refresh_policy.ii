@@ -99,12 +99,18 @@ inline auto refresh_policy<Clock>::table_base<HashTable, ValueType, Allocator>::
   auto self = static_cast<HashTable*>(this);
   auto lck = std::unique_lock<HashTable>(*self);
 
-  if (stop) return;
   for (;;) {
-    if (delay_queue.empty())
-      delay_queue_changed.wait(lck);
-    else
-      delay_queue_changed.wait_until(lck, delay_queue.begin()->refresh_tp);
+    if (delay_queue.empty()) {
+      // We need to wait for the stop-token,
+      // or switch to timed-wait once something-that-can-time-out is present.
+      delay_queue_changed.wait(lck,
+          [this]() { return stop || !delay_queue.empty(); });
+    } else {
+      // We need to wait for the stop-token.
+      // We don't need to switch to the untimed wait: that'll happen once the current timer expires.
+      delay_queue_changed.wait_until(lck, delay_queue.begin()->refresh_tp,
+          [this]() { return stop; });
+    }
     if (stop) return;
 
     const auto now = Clock::now();

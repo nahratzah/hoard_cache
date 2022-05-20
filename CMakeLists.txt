@@ -26,35 +26,66 @@ endif()
 enable_testing()
 
 set(headers
-    include/libhoard/policies.h
+    include/libhoard/allocator.h
+    include/libhoard/cache.h
     include/libhoard/doc_.h
-    include/libhoard/policies.ii
-    include/libhoard/impl.h
+    include/libhoard/equal.h
+    include/libhoard/error_policy.h
+    include/libhoard/expire_at_policy.h
+    include/libhoard/expire_at_policy.ii
+    include/libhoard/hash.h
+    include/libhoard/max_age_policy.h
+    include/libhoard/max_age_policy.ii
+    include/libhoard/max_size_policy.h
+    include/libhoard/max_size_policy.ii
+    include/libhoard/negative_cache_policy.h
+    include/libhoard/pointer_policy.h
+    include/libhoard/policies.h
+    include/libhoard/refresh_policy.h
+    include/libhoard/refresh_policy.ii
+    include/libhoard/resolver_policy.h
+    include/libhoard/resolver_policy.ii
+    include/libhoard/shared_from_this_policy.h
+    include/libhoard/thread_safe_policy.h
+    include/libhoard/thread_safe_policy.ii
+    include/libhoard/thread_unsafe_policy.h
+    include/libhoard/weaken_policy.h
     )
 set(detail_headers
-    include/libhoard/detail/identity_fn.h
+    include/libhoard/detail/async_resolver_callback.h
     include/libhoard/detail/basic_hashtable.h
-    include/libhoard/detail/queue.h
-    include/libhoard/detail/identity.h
-    include/libhoard/detail/linked_list.h
-    include/libhoard/detail/function_ref.ii
-    include/libhoard/detail/mapped_type.h
-    include/libhoard/detail/meta.h
-    include/libhoard/detail/queue.ii
-    include/libhoard/detail/function_ref.h
-    include/libhoard/detail/value_type.h
-    include/libhoard/detail/refcount.h
-    include/libhoard/detail/hashtable.h
-    include/libhoard/detail/identity_fn.ii
-    include/libhoard/detail/pending.h
-    include/libhoard/detail/notes.txt
-    include/libhoard/detail/value_type.ii
     include/libhoard/detail/basic_hashtable.ii
+    include/libhoard/detail/cache_async_get.h
+    include/libhoard/detail/cache_get.h
+    include/libhoard/detail/function_ref.h
+    include/libhoard/detail/function_ref.ii
+    include/libhoard/detail/hashtable.h
     include/libhoard/detail/hashtable.ii
-    include/libhoard/detail/pending.ii
+    include/libhoard/detail/identity.h
+    include/libhoard/detail/identity_fn.h
+    include/libhoard/detail/identity_fn.ii
+    include/libhoard/detail/linked_list.h
     include/libhoard/detail/linked_list.ii
+    include/libhoard/detail/mapped_type.h
     include/libhoard/detail/mapped_type.ii
+    include/libhoard/detail/meta.h
+    include/libhoard/detail/notes.txt
+    include/libhoard/detail/pending.h
+    include/libhoard/detail/pending.ii
+    include/libhoard/detail/queue.h
+    include/libhoard/detail/queue.ii
+    include/libhoard/detail/refcount.h
     include/libhoard/detail/refcount.ii
+    include/libhoard/detail/refresh_impl_policy.h
+    include/libhoard/detail/refresh_impl_policy.ii
+    include/libhoard/detail/traits.h
+    include/libhoard/detail/value_type.h
+    include/libhoard/detail/value_type.ii
+    )
+set(asio_headers
+    include/libhoard/asio/refresh_policy.h
+    include/libhoard/asio/refresh_policy.ii
+    include/libhoard/asio/resolver_policy.h
     )
 
 add_library(libhoard INTERFACE)
@@ -73,6 +104,7 @@ target_include_directories(libhoard INTERFACE
 
 install(FILES ${headers} DESTINATION "include/libhoard")
 install(FILES ${detail_headers} DESTINATION "include/libhoard/detail")
+install(FILES ${asio_headers} DESTINATION "include/libhoard/asio")
 install(TARGETS libhoard EXPORT libhoard DESTINATION "lib")
 install(EXPORT libhoard DESTINATION "lib/cmake/libhoard")
 

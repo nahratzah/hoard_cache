@@ -356,10 +356,6 @@ libhoard::cache<
     > c(libhoard::resolver_policy<resolver>(resolver(), ioctx.get_executor()));
 ```
 
-Note that the asio resolver-policy doesn't automatically mark the cache thread-safe.
-This is to avoid mutex overhead if you're using your asio program with only a single thread.
-(I may change that, no idea.)
-
 ## Asio Refresh Policy
 
 When using asio, we can also install a refresh policy that uses asio.
@@ -400,7 +396,7 @@ The refresh-policy will run its timers on the associated executor.
 But the resolver will run on its own executor.
 
 You can mix-and-match regular and asio resolver-policy and refresh-policy.
-This is very useful if you want to use a non-asynchronous resolver-policy.
+This is very useful if you want to use a synchronous resolver-policy.
 
 ## Asio Dynamic Refresh Policy
 

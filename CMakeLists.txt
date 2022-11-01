@@ -4,7 +4,7 @@ project(libhoard)
 include(CheckCXXCompilerFlag)
 
 set(LIBHOARD_VERSION_MAJOR 0 CACHE STRING "major version" FORCE)
-set(LIBHOARD_VERSION_MINOR 0 CACHE STRING "minor version" FORCE)
+set(LIBHOARD_VERSION_MINOR 1 CACHE STRING "minor version" FORCE)
 set(LIBHOARD_VERSION ${MONSOON_CACHE_VERSION_MAJOR}.${MONSOON_CACHE_VERSION_MINOR} CACHE STRING "version" FORCE)
 
 # If using ninja and clang, enable colours.

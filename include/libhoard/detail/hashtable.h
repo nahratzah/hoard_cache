@@ -424,6 +424,20 @@ class hashtable_helper_<KeyType, T, Policies...>::const_range {
 };
 
 
+template<typename...>
+struct arg_pack_starts_with_allocator_arg_
+: std::false_type
+{};
+
+template<typename... Args>
+struct arg_pack_starts_with_allocator_arg_<std::allocator_arg_t, Args...>
+: std::true_type
+{};
+
+template<typename... Args>
+inline constexpr bool arg_pack_starts_with_allocator_arg_v = arg_pack_starts_with_allocator_arg_<std::remove_cv_t<std::remove_reference_t<Args>>...>::value;
+
+
 /**
  * \brief Hashtable that drives the cache primitives.
  * \details
@@ -467,7 +481,7 @@ class hashtable
   explicit hashtable(std::allocator_arg_t aa, allocator_type allocator, Args&&... args);
   template<typename... Args>
   explicit hashtable(std::allocator_arg_t aa, allocator_type allocator, float max_load_factor, Args&&... args);
-  template<typename... Args>
+  template<typename... Args, std::enable_if_t<!arg_pack_starts_with_allocator_arg_v<Args...>, int> = 0>
   explicit hashtable(Args&&... args); // also handles the max-load-factor case
 
   ~hashtable();

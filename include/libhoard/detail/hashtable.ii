@@ -469,7 +469,7 @@ inline hashtable<KeyType, T, Policies...>::hashtable(std::allocator_arg_t aa, al
 }
 
 template<typename KeyType, typename T, typename... Policies>
-template<typename... Args>
+template<typename... Args, std::enable_if_t<!arg_pack_starts_with_allocator_arg_v<Args...>, int>>
 inline hashtable<KeyType, T, Policies...>::hashtable(Args&&... args)
 : hashtable(std::allocator_arg, allocator_type(), std::forward<Args>(args)...)
 {}
@@ -597,7 +597,7 @@ inline auto hashtable<KeyType, T, Policies...>::get(const Keys&... keys) noexcep
 template<typename KeyType, typename T, typename... Policies>
 template<typename CompletionCallback, typename... Keys>
 inline auto hashtable<KeyType, T, Policies...>::async_get(CompletionCallback&& callback, const Keys&... keys) -> void {
-  value_pointer new_value_ptr;
+  value_pointer new_value_ptr(get_allocator());
   const std::size_t hash = std::invoke(this->hash, keys...);
   auto get_result = get_(
       hash,

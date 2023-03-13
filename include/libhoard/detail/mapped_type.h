@@ -21,7 +21,7 @@ class mapped_value {
   public:
   using mapped_type = T;
   using error_type = ErrorType;
-  using pending_type = pending<mapped_type, Allocator, error_type>;
+  using pending_type = class pending<mapped_type, Allocator, error_type>;
   using allocator_type = typename pending_type::allocator_type;
   using callback_fn = typename pending_type::callback_fn;
 
@@ -68,7 +68,7 @@ class mapped_pointer {
   public:
   using mapped_type = Pointer;
   using error_type = ErrorType;
-  using pending_type = pending<mapped_type, Allocator, error_type>;
+  using pending_type = class pending<mapped_type, Allocator, error_type>;
   using allocator_type = typename pending_type::allocator_type;
   using callback_fn = typename pending_type::callback_fn;
 
